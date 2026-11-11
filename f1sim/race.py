@@ -18,6 +18,7 @@ FOLLOW_GAP = 0.25        # minimum gap behind a car you failed to pass, s
 PASS_SCALE = 0.25        # softness of the pass-probability curve, s
 QUALI_SIGMA = 0.22       # one-lap noise, s
 GRID_SPACING = 0.3       # time gap per grid slot at the start, s
+START_SIGMA = 0.35      # first-lap scramble noise, s
 SC_LAP_FACTOR = 1.4      # safety-car lap time relative to base lap
 SC_PIT_FACTOR = 0.5      # fraction of normal pit loss when stopping under SC
 SC_GAP = 0.5             # gap per position once the field is bunched, s
@@ -192,7 +193,7 @@ def simulate_race(
             + w * (WET_LAP_FACTOR * track.base_lap + wet_skill)
         )
         if lap == 1:  # standing start and first-lap scramble
-            lt += 4.0 + rng.normal(0, 0.8, (S, N))
+            lt += 4.0 + rng.normal(0, START_SIGMA, (S, N))
         lt = np.where(scc, track.base_lap * SC_LAP_FACTOR, lt)
 
         opportunistic = sc_start[:, lap - 1][:, None] & (next_pit > lap) & (next_pit - lap <= 6)

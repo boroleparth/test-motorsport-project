@@ -68,11 +68,11 @@ def test_faster_car_wins_more():
     assert not res.dnf.any()
 
 
-def test_track_position_matters_more_at_monaco(grid, tracks):
-    def pole_to_win(key):
-        r = simulate_race(grid, tracks[key], 1500, seed=4, wet=False)
+def test_harder_overtaking_protects_pole(grid, tracks):
+    def pole_to_win(overtake):
+        r = simulate_race(grid, replace(tracks["bahrain"], overtake=overtake), 1500, seed=4, wet=False)
         return ((r.grid_positions == 1) & (r.positions == 1)).sum() / r.n_sims
-    assert pole_to_win("monaco") > pole_to_win("bahrain") + 0.05
+    assert pole_to_win(3.0) > pole_to_win(0.3) + 0.05
 
 
 def test_wet_flag(grid, tracks):

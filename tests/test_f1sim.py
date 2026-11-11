@@ -189,3 +189,21 @@ def test_fitted_ratings_beat_uninformed(grid, tracks):
     naive = backtest(flat, tracks, races, n_sims=300, seed=1)["mean"]
     wf = walk_forward(season, tracks, grid, start=14, n_sims=300, seed=1)["mean"]
     assert wf["rps"] < naive["rps"] - 0.03 and wf["spearman"] > 0.4
+
+
+def test_dashboard(grid, tracks, tmp_path, capsys):
+    from f1sim.dashboard import build_data, render
+    data = build_data(grid, tracks, load_season(), n_sims=200, seed=1, accuracy=False)
+    assert data["next"] in tracks and len(data["tracks"]) == len(tracks)
+    for t in data["tracks"]:
+        assert sum(r["win"] for r in t["rows"]) == pytest.approx(1, abs=0.01)
+        assert len(t["dist"]) == len(grid.drivers)
+    assert sum(r["title"] for r in data["season"]["drivers"]) == pytest.approx(1, abs=0.01)
+    assert set(data["strategy"]["drivers"]) == set(grid.codes)
+    json.dumps(data)                                   # everything is plain JSON
+    page = render(data)
+    assert page.startswith("<!doctype html>") and "__DATA__" not in page
+    assert not render(data, standalone=False).startswith("<!doctype")
+    out = tmp_path / "d.html"
+    main(["dashboard", "--sims", "200", "--out", str(out)])
+    assert "F1 Race" in out.read_text() and capsys.readouterr().out

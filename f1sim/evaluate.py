@@ -19,6 +19,7 @@ def score_race(result: RaceResult, actual: list[str]) -> dict:
     treated as classified last; codes not in the grid are ignored.
 
     Metrics (lower is better unless noted):
+      favourite     the driver the model rated most likely to win
       winner_prob   probability given to the real winner (higher is better)
       log_loss      -ln(winner_prob)
       brier         multi-class Brier score of the win probabilities
@@ -52,6 +53,7 @@ def score_race(result: RaceResult, actual: list[str]) -> dict:
 
     return {
         "winner": order[0],
+        "favourite": codes[int(win.argmax())],
         "winner_prob": float(win[winner]),
         "log_loss": float(-np.log(max(win[winner], eps))),
         "brier": float(((win - onehot) ** 2).sum()),
@@ -67,7 +69,7 @@ def backtest(grid: Grid, tracks: dict[str, Track], races: list[dict], n_sims: in
     ``races`` is a list of ``{"track": <key>, "results": [codes...], "wet": bool (optional)}``.
     Returns per-race scores plus the mean of every numeric metric.
     """
-    seeds = np.random.SeedSequence(seed)
+    seeds = seed if isinstance(seed, np.random.SeedSequence) else np.random.SeedSequence(seed)
     scores = []
     for race in races:
         (child,) = seeds.spawn(1)

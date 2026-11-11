@@ -51,7 +51,7 @@ def simulate_season(
     ``standings`` gives points already scored (driver code -> points), so the
     remainder of a season can be simulated from the current championship state.
     """
-    seeds = np.random.SeedSequence(seed)
+    seeds = seed if isinstance(seed, np.random.SeedSequence) else np.random.SeedSequence(seed)
     pts = np.zeros((n_sims, len(grid.drivers)))
     for code, p in (standings or {}).items():
         pts[:, grid.index(code)] += p

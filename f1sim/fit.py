@@ -173,7 +173,7 @@ def walk_forward(season: dict, tracks: dict, base: Grid | None = None, start: in
     from .race import simulate_race
 
     scores = []
-    seeds = np.random.SeedSequence(seed)
+    seeds = seed if isinstance(seed, np.random.SeedSequence) else np.random.SeedSequence(seed)
     for race in season["races"]:
         if race["round"] <= start or race["track"] not in tracks:
             continue

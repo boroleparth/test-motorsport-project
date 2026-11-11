@@ -24,6 +24,7 @@ pip install -e ".[dev]"
 ## Use
 
 ```bash
+f1sim dashboard --out dashboard.html           # everything below as one HTML page
 f1sim tracks                                   # circuits and their fastest strategy
 f1sim race monaco --seed 1                     # win / podium / points probabilities
 f1sim race britain --wet                       # force a wet race (--dry to force dry)
@@ -57,6 +58,15 @@ result.position_matrix()      # P[driver, finishing position]
 season = simulate_season(grid, tracks.values(), n_sims=1000, seed=42)
 season.drivers()[:3]          # title probability, expected points, 5–95% range
 ```
+
+## Dashboard
+
+`f1sim dashboard` runs every simulation and writes one self-contained HTML file
+you can open in a browser: race odds and finishing-position heatmap for any
+circuit, championship projection from the real standings, a pit-strategy
+comparison for each driver at the next race, the walk-forward accuracy record,
+and the fitted car and driver pace. It takes about 30 seconds at the default
+2,000 simulations per circuit.
 
 ## Fitting and testing against reality
 
@@ -125,6 +135,7 @@ f1sim/season.py     championship simulation
 f1sim/evaluate.py   prediction scoring, backtesting, strategy comparison
 f1sim/datasource.py download a season of real results
 f1sim/fit.py        fit ratings from results; walk-forward testing
+f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)

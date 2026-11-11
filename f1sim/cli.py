@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+from .dashboard import build_dashboard
 from .datasource import fetch_season, load_season
 from .evaluate import backtest, compare_strategies
 from .fit import fit_grid, grid_to_json, walk_forward
@@ -110,6 +111,12 @@ def cmd_backtest(args, grid, tracks):
     print(_table(out["races"] + [mean], cols))
 
 
+def cmd_dashboard(args, grid, tracks):
+    html = build_dashboard(grid, tracks, load_season(args.season_file), args.sims, 0 if args.seed is None else args.seed)
+    Path(args.out).write_text(html)
+    print(f"Wrote {args.out} ({len(html) // 1024} KB). Open it in a browser.")
+
+
 def cmd_fetch(args, grid, tracks):
     season = fetch_season(args.year)
     Path(args.out).write_text(json.dumps(season, separators=(",", ":")))
@@ -177,6 +184,11 @@ def main(argv: list[str] | None = None) -> None:
                    help="refit ratings before each race using earlier rounds only (honest out-of-sample test)")
     p.add_argument("--start-round", type=int, default=5, help="first rounds used only for fitting (walk-forward)")
     p.set_defaults(func=cmd_backtest)
+
+    p = sub.add_parser("dashboard", parents=[common()], help="write an HTML dashboard of all predictions")
+    p.add_argument("--out", default="dashboard.html")
+    p.add_argument("--season-file", help="season file from `f1sim fetch` (default: bundled 2026)")
+    p.set_defaults(func=cmd_dashboard)
 
     p = sub.add_parser("fetch", parents=[common()], help="download a season of real results")
     p.add_argument("year")

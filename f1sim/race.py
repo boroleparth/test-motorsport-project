@@ -17,6 +17,7 @@ FUEL_PER_LAP = 0.03      # s of lap time per lap of fuel on board
 FOLLOW_GAP = 0.25        # minimum gap behind a car you failed to pass, s
 PASS_SCALE = 0.25        # softness of the pass-probability curve, s
 QUALI_SIGMA = 0.22       # one-lap noise, s
+FORM_SIGMA = 0.3         # weekend-to-weekend swing in each team's car pace, s/lap
 GRID_SPACING = 0.3       # time gap per grid slot at the start, s
 START_SIGMA = 0.35      # first-lap scramble noise, s
 SC_LAP_FACTOR = 1.4      # safety-car lap time relative to base lap
@@ -151,6 +152,9 @@ def simulate_race(
     rows = np.arange(S)
 
     car = np.array([t.pace for t in teams])
+    # A car suits some circuits better than others: one draw per team per weekend.
+    team_idx = np.array([list(grid.teams).index(d.team) for d in drivers])
+    car = car + rng.normal(0, FORM_SIGMA, (S, len(grid.teams)))[:, team_idx]
     drv = np.array([d.pace for d in drivers])
     sigma = np.array([d.consistency for d in drivers])
     wet_skill = np.array([d.wet for d in drivers])

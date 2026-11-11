@@ -4,7 +4,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from f1sim import (Strategy, backtest, compare_strategies, load_grid, load_tracks,
+from f1sim import (Strategy, backtest, fit_grid, load_season, walk_forward, compare_strategies, load_grid, load_tracks,
                    optimal_strategies, score_race, simulate_race, simulate_season)
 from f1sim.cli import main
 from f1sim.models import Driver, Grid, Team
@@ -23,7 +23,7 @@ def tracks():
 
 def test_bundled_data_loads(grid, tracks):
     assert len(grid.drivers) == 22 and len(grid.teams) == 11
-    assert len(tracks) == 24
+    assert len(tracks) == 25
     assert all(sum(d.team == t for d in grid.drivers) == 2 for t in grid.teams)
 
 
@@ -68,11 +68,16 @@ def test_faster_car_wins_more():
     assert not res.dnf.any()
 
 
-def test_harder_overtaking_protects_pole(grid, tracks):
-    def pole_to_win(overtake):
-        r = simulate_race(grid, replace(tracks["bahrain"], overtake=overtake), 1500, seed=4, wet=False)
-        return ((r.grid_positions == 1) & (r.positions == 1)).sum() / r.n_sims
-    assert pole_to_win(3.0) > pole_to_win(0.3) + 0.05
+def test_harder_overtaking_traps_a_fast_car(tracks):
+    # One driver is quickest in the race but qualifies at the back.
+    teams = {"T": Team("T", reliability=0.0)}
+    drivers = [Driver("ACE", "a", "T", pace=0.0, quali=2.0, error_rate=0.0)]
+    drivers += [Driver(f"D{i}", "d", "T", pace=0.6, quali=0.0, error_rate=0.0) for i in range(9)]
+    def ace_wins(overtake):
+        track = replace(tracks["spain"], overtake=overtake, sc_prob=0.0)
+        r = simulate_race(Grid(teams, drivers), track, 500, seed=4, wet=False)
+        return (r.positions[:, 0] == 1).mean()
+    assert ace_wins(0.3) > ace_wins(3.0) + 0.3
 
 
 def test_wet_flag(grid, tracks):
@@ -139,15 +144,48 @@ def test_scoring(grid, tracks):
 
 def test_backtest_and_cli(grid, tracks, tmp_path, capsys):
     races = [{"track": "bahrain", "results": ["NOR", "VER", "PIA"], "wet": False},
-             {"track": "monaco", "results": ["LEC", "NOR", "PIA"]}]
+             {"track": "monaco", "results": ["LEC", "NOR", "PIA"], "round": 2}]
     out = backtest(grid, tracks, races, n_sims=200, seed=1)
     assert len(out["races"]) == 2 and 0 <= out["mean"]["rps"] <= 1
     f = tmp_path / "results.json"
     f.write_text(json.dumps(races))
     for argv in (["tracks"], ["race", "bahrain", "--sims", "50", "--seed", "1", "--strategy", "VER=M-H@24"],
-                 ["season", "--sims", "20", "--start", "qatar"], ["strategy", "monaco", "LEC", "--sims", "50"],
+                 ["season", "--sims", "20", "--start", "qatar"], ["season", "--sims", "20"],
+                 ["season", "--sims", "5", "--full"], ["fit", "--through", "8", "--out", str(tmp_path / "g.json")],
+                 ["race", "monaco", "--sims", "20", "--grid", str(tmp_path / "g.json")],
+                 ["backtest", "--walk-forward", "--start-round", "18", "--sims", "50"], ["strategy", "monaco", "LEC", "--sims", "50"],
                  ["backtest", str(f), "--sims", "50"]):
         main(argv)
         assert capsys.readouterr().out.strip()
     with pytest.raises(SystemExit):
         main(["race", "nowhere"])
+
+
+def test_fit_from_real_results(grid):
+    season = load_season()
+    fitted = fit_grid(season, grid)
+    last = season["races"][-1]
+    assert set(fitted.codes) == set(last["entries"]) and len(fitted.teams) == 11
+    assert min(t.pace for t in fitted.teams.values()) < 0.2
+    assert all(0 < t.reliability < 0.5 for t in fitted.teams.values())
+    for team in fitted.teams:  # the better driver in each team is the baseline
+        assert min(d.pace for d in fitted.drivers if d.team == team) < 0.2
+    # the championship leader's team should be rated near the front
+    leader = max(season["standings"], key=season["standings"].get)
+    leader_team = next(d.team for d in fitted.drivers if d.code == leader)
+    assert list(fitted.teams).index(leader_team) < 3
+    # fitting on fewer rounds only uses those rounds
+    early = fit_grid(season, grid, through_round=3)
+    assert set(early.codes) == set(season["races"][2]["entries"])
+    with pytest.raises(ValueError):
+        fit_grid(season, grid, through_round=0)
+
+
+def test_fitted_ratings_beat_uninformed(grid, tracks):
+    season = load_season()
+    flat = Grid({t.name: Team(t.name) for t in grid.teams.values()},
+                [Driver(d.code, d.name, d.team) for d in grid.drivers])
+    races = [r for r in season["races"] if r["round"] > 14]
+    naive = backtest(flat, tracks, races, n_sims=300, seed=1)["mean"]
+    wf = walk_forward(season, tracks, grid, start=14, n_sims=300, seed=1)["mean"]
+    assert wf["rps"] < naive["rps"] - 0.03 and wf["spearman"] > 0.4

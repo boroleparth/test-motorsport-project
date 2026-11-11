@@ -4,10 +4,15 @@ A Monte Carlo simulator for **predicting** F1 races and championships and for
 **testing** ideas (pit strategies, car upgrades, "what if it rains?") against a
 consistent model. Pure Python + NumPy; 2,000 full race simulations take well under a second.
 
-> **The bundled ratings are illustrative placeholders, not fitted to real data.**
-> The driver/team/circuit numbers in `f1sim/data/*.json` are rough hand-set
-> estimates so the tool runs out of the box. Predictions are only as good as
-> those inputs — edit them, then use `f1sim backtest` to check them against real results.
+The bundled ratings are **fitted from real 2026 results** (rounds 1–20, from the
+public Jolpica/Ergast API), and the whole pipeline is scored on races it has
+not seen: predicting each 2026 race from earlier rounds only, the fitted model
+gets a ranked probability score of 0.111 and a 0.70 rank correlation with the
+real finishing order, against 0.167 and 0.50 for hand-guessed ratings.
+
+What is *not* measured: lap-time consistency, pit-stop times, wet-weather skill
+and the circuit parameters in `tracks.json` are assumptions. This is a
+statistical simulator, not a neural network — see "How the model works".
 
 ## Install
 
@@ -25,9 +30,13 @@ f1sim race britain --wet                       # force a wet race (--dry to forc
 f1sim race bahrain --strategy VER=S-M-M@15,36  # pin one driver's strategy
 f1sim strategy bahrain VER                     # compare the 5 fastest strategies for a driver
 f1sim strategy bahrain VER M-H@24 H-M@33       # ...or your own candidates
-f1sim season --sims 1000                       # championship probabilities
-f1sim season --start qatar --standings pts.json  # finish a season from current points
-f1sim backtest results.json                    # score predictions against real results
+f1sim season                                   # finish the real season from current standings
+f1sim season --full --sims 1000                # whole calendar from zero points
+f1sim fetch 2026 --out season.json             # download real results (needs network)
+f1sim fit --season-file season.json --out grid.json   # fit ratings from them
+f1sim race qatar --grid grid.json              # predict with your fitted ratings
+f1sim backtest --walk-forward                  # honest test: predict each race from earlier rounds
+f1sim backtest results.json                    # score fixed ratings against a results file
 ```
 
 Strategies are written `COMPOUNDS@PIT_LAPS`, e.g. `M-H@22` (mediums, pit at the
@@ -49,21 +58,28 @@ season = simulate_season(grid, tracks.values(), n_sims=1000, seed=42)
 season.drivers()[:3]          # title probability, expected points, 5–95% range
 ```
 
-## Testing predictions against reality
+## Fitting and testing against reality
 
-Put real results in a JSON file (finishing order as driver codes) and run `f1sim backtest`:
+`f1sim fetch` saves a season (results, qualifying times, standings) as JSON.
+`f1sim fit` turns it into ratings:
+
+- **one-lap pace** from each driver's best qualifying lap relative to the fastest;
+- **race pace** from the finishing gap to the winner per lap;
+- each split into team + driver by a robust (median-like) regression, with
+  recent races weighted more because cars develop;
+- **retirement rates** per team and driver, shrunk towards the field average.
+
+`f1sim backtest --walk-forward` is the test that matters: before each race it
+refits using earlier rounds only, predicts, and scores against the real result.
+It reports the probability given to the real winner, log loss, Brier score,
+ranked probability score (RPS, 0 = perfect) and rank correlation of predicted
+vs actual order. Change the model, re-run, keep what improves the mean.
+
+`f1sim backtest file.json` also accepts a hand-written list:
 
 ```json
-[
-  {"track": "bahrain", "results": ["VER", "NOR", "LEC", "..."], "wet": false},
-  {"track": "monaco",  "results": ["LEC", "PIA", "NOR", "..."]}
-]
+[{"track": "monaco", "results": ["LEC", "PIA", "NOR"], "wet": false}]
 ```
-
-For each race it reports the probability the model gave the real winner, log
-loss, Brier score, ranked probability score (RPS, 0 = perfect) and the rank
-correlation between predicted and actual order. Tune the ratings, re-run, and
-keep changes that improve the mean scores.
 
 ## How the model works
 
@@ -83,13 +99,18 @@ lap time = circuit base lap + car pace + driver pace
   otherwise it is held 0.25 s behind. This is what makes grid position matter at Monaco.
 - **Safety cars** — random periods that neutralise lap times, bunch the field
   and halve pit loss; cars near their stop window pit opportunistically.
+- **Weekend form** — each team's car pace is shifted by a random amount per
+  weekend (0.3 s/lap spread, tuned on the walk-forward test), because cars suit
+  some circuits better than others.
 - **Retirements** — mechanical (team `reliability`) and driver error (`error_rate`).
 - **Rain** — per-circuit probability; wet races add lap-time variance, more
-  driver errors, and each driver's `wet` skill offset.
+  driver errors, and each driver's `wet` skill offset (0 for everyone in the
+  fitted grid, since results alone can't measure it).
 
 ### Known simplifications
 
-No sprint races, grid penalties, red flags, virtual safety car, team orders,
+No neural network or machine-learned lap model; no sprint races (real sprint
+points already scored are carried in the standings), grid penalties, red flags, virtual safety car, team orders,
 intermediate/wet tyre choices, or changing weather mid-race; tyre parameters
 are generic rather than per-event compound allocations; undercut/overcut only
 emerge from tyre age, not from out-lap warm-up.
@@ -102,7 +123,9 @@ f1sim/strategy.py   tyre model, Strategy, optimal-strategy search
 f1sim/race.py       lap-by-lap race engine (vectorised over simulations)
 f1sim/season.py     championship simulation
 f1sim/evaluate.py   prediction scoring, backtesting, strategy comparison
+f1sim/datasource.py download a season of real results
+f1sim/fit.py        fit ratings from results; walk-forward testing
 f1sim/cli.py        command-line interface
-f1sim/data/         illustrative grid and calendar
+f1sim/data/         fitted 2026 grid, 2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)
 ```

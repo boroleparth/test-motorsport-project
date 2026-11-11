@@ -6,8 +6,9 @@ import json
 import sys
 from pathlib import Path
 
+from .benchmark import LABELS, METHODS, benchmark, summarise
 from .dashboard import build_dashboard
-from .datasource import fetch_season, load_season
+from .datasource import bundled_seasons, fetch_season, load_season
 from .evaluate import backtest, compare_strategies
 from .fit import fit_grid, grid_to_json, walk_forward
 from .models import load_grid, load_tracks
@@ -50,7 +51,10 @@ def cmd_race(args, grid, tracks):
     for item in args.strategy or []:
         code, _, text = item.partition("=")
         pinned[code.upper()] = Strategy.parse(text)
-    res = simulate_race(grid, track, args.sims, args.seed, strategies=pinned, wet=_wet(args))
+    order = [c.strip().upper() for c in args.start_grid.split(",")] if args.start_grid else None
+    for c in order or []:
+        grid.index(c)
+    res = simulate_race(grid, track, args.sims, args.seed, strategies=pinned, wet=_wet(args), start_grid=order)
     print(f"{track.name}: {track.laps} laps, {args.sims} simulations, {100 * res.wet.mean():.0f}% wet\n")
     print(_table(res.summary(), [("driver", "drv", "s"), ("team", "team", "s"), ("win", "win", "pct"),
                                  ("podium", "podium", "pct"), ("points", "top10", "pct"), ("pole", "pole", "pct"),
@@ -111,8 +115,32 @@ def cmd_backtest(args, grid, tracks):
     print(_table(out["races"] + [mean], cols))
 
 
+def cmd_benchmark(args, grid, tracks):
+    years = args.seasons or bundled_seasons()
+    out = benchmark([load_season(y) for y in years], tracks, grid, start=args.start_round, n_sims=args.sims,
+                    seed=0 if args.seed is None else args.seed)
+    cols = [("label", "method", "s"), ("favourite_won", "fav. won", "pct"), ("winner_prob", "P(winner)", "pct"),
+            ("log_loss", "logloss", "f2"), ("rps", "RPS", "f3"), ("spearman", "order", "f2"), ("podium_hits", "podium/3", "f2")]
+    groups = [("All seasons", None)]
+    if args.holdout:
+        groups = [(f"Held-out seasons ({', '.join(args.holdout)})", args.holdout),
+                  ("Other seasons", [y for y in map(str, years) if y not in args.holdout])]
+    for title, subset in groups:
+        means = summarise(out["races"], subset)
+        if not means["n_races"]:
+            continue
+        print(f"{title}: {means['n_races']} races, each predicted from earlier rounds only\n")
+        print(_table([{"label": LABELS[m], **means[m]} for m in METHODS], cols))
+        print()
+    print("Calibration of the simulator before qualifying (podium finishes)\n")
+    print(_table([{"range": f"{100 * r['lo']:.0f}-{100 * r['hi']:.0f}%", **r} for r in out["calibration"]["podium"]],
+                 [("range", "predicted", "s"), ("n", "cases", "s"), ("predicted", "avg predicted", "pct"), ("observed", "happened", "pct")]))
+
+
 def cmd_dashboard(args, grid, tracks):
-    html = build_dashboard(grid, tracks, load_season(args.season_file), args.sims, 0 if args.seed is None else args.seed)
+    history = [load_season(y) for y in bundled_seasons()] if not args.season_file else None
+    html = build_dashboard(grid, tracks, load_season(args.season_file), args.sims, 0 if args.seed is None else args.seed,
+                           history=history, accuracy=not args.quick)
     Path(args.out).write_text(html)
     print(f"Wrote {args.out} ({len(html) // 1024} KB). Open it in a browser.")
 
@@ -162,6 +190,7 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("race", parents=[common(), weather], help="predict a single race")
     p.add_argument("track")
     p.add_argument("--strategy", action="append", metavar="DRV=M-H@22", help="pin a driver's strategy (repeatable)")
+    p.add_argument("--start-grid", metavar="VER,NOR,...", help="real starting order, pole first, once qualifying is done")
     p.set_defaults(func=cmd_race)
 
     p = sub.add_parser("season", parents=[common(500)], help="simulate the championship (default: rest of the real season)")
@@ -185,8 +214,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--start-round", type=int, default=5, help="first rounds used only for fitting (walk-forward)")
     p.set_defaults(func=cmd_backtest)
 
+    p = sub.add_parser("benchmark", parents=[common(1000)], help="compare the simulator with simple baselines over many seasons")
+    p.add_argument("--seasons", nargs="+", help="bundled years or season files (default: all bundled)")
+    p.add_argument("--holdout", nargs="+", default=["2025", "2026"], help="seasons reported separately (not used for tuning)")
+    p.add_argument("--start-round", type=int, default=5, help="first rounds of each season are used only for fitting")
+    p.set_defaults(func=cmd_benchmark)
+
     p = sub.add_parser("dashboard", parents=[common()], help="write an HTML dashboard of all predictions")
     p.add_argument("--out", default="dashboard.html")
+    p.add_argument("--quick", action="store_true", help="skip the multi-season accuracy section (much faster)")
     p.add_argument("--season-file", help="season file from `f1sim fetch` (default: bundled 2026)")
     p.set_defaults(func=cmd_dashboard)
 

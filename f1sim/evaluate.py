@@ -12,22 +12,22 @@ def _ranks(x: np.ndarray) -> np.ndarray:
     return x.argsort().argsort().astype(float)
 
 
-def score_race(result: RaceResult, actual: list[str]) -> dict:
-    """Compare a predicted distribution with an actual finishing order.
+def score_matrix(codes: list[str], P: np.ndarray, actual: list[str], eps: float = 1e-3) -> dict:
+    """Score a position-probability matrix ``P[driver, position]`` against a finishing order.
 
     ``actual`` lists driver codes from first to last. Drivers missing from it are
-    treated as classified last; codes not in the grid are ignored.
+    treated as classified last; codes not in ``codes`` are ignored.
 
     Metrics (lower is better unless noted):
-      favourite     the driver the model rated most likely to win
+      favourite     the driver rated most likely to win
       winner_prob   probability given to the real winner (higher is better)
       log_loss      -ln(winner_prob)
       brier         multi-class Brier score of the win probabilities
       rps           mean ranked probability score over all drivers' positions
       spearman      rank correlation of expected vs actual position (higher is better)
       podium_hits   how many of the predicted top 3 finished on the podium (higher is better)
+      favourite_won 1 if the favourite won, else 0 (higher is better)
     """
-    codes = result.grid.codes
     n = len(codes)
     order = [c.upper() for c in actual if c.upper() in codes]
     if not order:
@@ -35,10 +35,8 @@ def score_race(result: RaceResult, actual: list[str]) -> dict:
     order += [c for c in codes if c not in order]
     actual_pos = np.array([order.index(c) for c in codes])  # 0-based
 
-    P = result.position_matrix()
     win = P[:, 0]
     winner = codes.index(order[0])
-    eps = 0.5 / result.n_sims  # floor so an unseen winner gives a finite loss
     onehot = np.zeros(n)
     onehot[winner] = 1.0
 
@@ -50,17 +48,25 @@ def score_race(result: RaceResult, actual: list[str]) -> dict:
     spearman = float(np.corrcoef(_ranks(exp_pos), actual_pos)[0, 1])
     predicted_top3 = set(np.argsort(exp_pos)[:3])
     actual_top3 = {codes.index(c) for c in order[:3]}
+    favourite = codes[int(win.argmax())]
 
     return {
         "winner": order[0],
-        "favourite": codes[int(win.argmax())],
+        "favourite": favourite,
         "winner_prob": float(win[winner]),
         "log_loss": float(-np.log(max(win[winner], eps))),
         "brier": float(((win - onehot) ** 2).sum()),
         "rps": rps,
         "spearman": spearman,
         "podium_hits": len(predicted_top3 & actual_top3),
+        "favourite_won": int(favourite == order[0]),
     }
+
+
+def score_race(result: RaceResult, actual: list[str]) -> dict:
+    """Score a simulated race against the real finishing order (see :func:`score_matrix`)."""
+    # floor so a winner never seen in the simulations still gives a finite loss
+    return score_matrix(result.grid.codes, result.position_matrix(), actual, eps=0.5 / result.n_sims)
 
 
 def backtest(grid: Grid, tracks: dict[str, Track], races: list[dict], n_sims: int = 2000, seed: int | None = None) -> dict:

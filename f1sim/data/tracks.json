@@ -25,6 +25,8 @@
     {"key": "qatar", "name": "Lusail", "laps": 57, "base_lap": 84.0, "pit_loss": 25.0, "overtake": 1.1, "sc_prob": 0.5, "rain_prob": 0.01, "deg": 1.4},
     {"key": "abu_dhabi", "name": "Yas Marina", "laps": 58, "base_lap": 86.0, "pit_loss": 21.5, "overtake": 0.9, "sc_prob": 0.35, "rain_prob": 0.01, "deg": 0.95},
     {"key": "bahrain", "name": "Sakhir", "laps": 57, "base_lap": 93.0, "pit_loss": 23.0, "overtake": 0.5, "sc_prob": 0.4, "rain_prob": 0.01, "deg": 1.35},
-    {"key": "saudi", "name": "Jeddah", "laps": 50, "base_lap": 90.0, "pit_loss": 20.0, "overtake": 0.7, "sc_prob": 0.75, "rain_prob": 0.01, "deg": 0.8}
+    {"key": "saudi", "name": "Jeddah", "laps": 50, "base_lap": 90.0, "pit_loss": 20.0, "overtake": 0.7, "sc_prob": 0.75, "rain_prob": 0.01, "deg": 0.8},
+    {"key": "imola", "name": "Imola", "laps": 63, "base_lap": 77.5, "pit_loss": 27.0, "overtake": 1.5, "sc_prob": 0.55, "rain_prob": 0.2, "deg": 0.9},
+    {"key": "ricard", "name": "Paul Ricard", "laps": 53, "base_lap": 93.5, "pit_loss": 26.0, "overtake": 0.8, "sc_prob": 0.35, "rain_prob": 0.08, "deg": 1.2}
   ]
 }

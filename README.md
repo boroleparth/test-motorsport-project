@@ -5,10 +5,23 @@ A Monte Carlo simulator for **predicting** F1 races and championships and for
 consistent model. Pure Python + NumPy; 2,000 full race simulations take well under a second.
 
 The bundled ratings are **fitted from real 2026 results** (rounds 1–20, from the
-public Jolpica/Ergast API), and the whole pipeline is scored on races it has
-not seen: predicting each 2026 race from earlier rounds only, the fitted model
-gets a ranked probability score of 0.111 and a 0.70 rank correlation with the
-real finishing order, against 0.167 and 0.50 for hand-guessed ratings.
+public Jolpica/Ergast API), and the whole pipeline is benchmarked against
+simple baselines on races it has not seen.
+
+**Benchmark: 34 races from 2025–2026**, each predicted from earlier rounds of
+its season only. Model settings were tuned on 2022–2024, so these are held out.
+
+| Method | Favourite won | Podium drivers found | Order match | Probability score (0 = perfect) |
+|---|---|---|---|---|
+| Simulator, before qualifying | 24% | 1.71 of 3 | 0.61 | 0.126 |
+| Baseline: championship order | 26% | 1.79 of 3 | 0.59 | 0.129 |
+| Simulator, after qualifying | 65% | 2.12 of 3 | 0.67 | 0.113 |
+| Baseline: starting grid order | 65% | 2.03 of 3 | 0.67 | 0.116 |
+
+Read honestly: the simulator is slightly ahead of the matching baseline on
+ranked probability score in both settings, and level on picking the winner.
+With 34 races those margins are small. The baselines are strong, and they are
+scored generously (see `f1sim/benchmark.py`). Reproduce with `f1sim benchmark`.
 
 What is *not* measured: lap-time consistency, pit-stop times, wet-weather skill
 and the circuit parameters in `tracks.json` are assumptions. This is a
@@ -36,7 +49,9 @@ f1sim season --full --sims 1000                # whole calendar from zero points
 f1sim fetch 2026 --out season.json             # download real results (needs network)
 f1sim fit --season-file season.json --out grid.json   # fit ratings from them
 f1sim race qatar --grid grid.json              # predict with your fitted ratings
-f1sim backtest --walk-forward                  # honest test: predict each race from earlier rounds
+f1sim benchmark                                # simulator vs baselines over 2022–2026, plus calibration
+f1sim race qatar --start-grid ANT,VER,RUS      # predict once the real grid is known
+f1sim backtest --walk-forward                  # predict each race of a season from earlier rounds
 f1sim backtest results.json                    # score fixed ratings against a results file
 ```
 
@@ -65,8 +80,9 @@ season.drivers()[:3]          # title probability, expected points, 5–95% rang
 you can open in a browser: race odds and finishing-position heatmap for any
 circuit, championship projection from the real standings, a pit-strategy
 comparison for each driver at the next race, the walk-forward accuracy record,
-and the fitted car and driver pace. It takes about 30 seconds at the default
-2,000 simulations per circuit.
+and the fitted car and driver pace. It takes about a minute and a half at the
+default 2,000 simulations per circuit; `--quick` skips the multi-season
+accuracy section.
 
 ## Fitting and testing against reality
 
@@ -77,9 +93,18 @@ and the fitted car and driver pace. It takes about 30 seconds at the default
 - **race pace** from the finishing gap to the winner per lap;
 - each split into team + driver by a robust (median-like) regression, with
   recent races weighted more because cars develop;
+- race pace is then pulled part-way towards the order implied by average
+  finishing position, which says who beats whom more reliably than time gaps;
 - **retirement rates** per team and driver, shrunk towards the field average.
 
-`f1sim backtest --walk-forward` is the test that matters: before each race it
+`f1sim benchmark` runs that test over every bundled season (2022–2026) against
+two baselines, championship order and starting-grid order, and prints a
+calibration table (when the simulator says 30%, how often does it happen).
+Given the real grid and qualifying times (`start_grid`, `quali_times` in
+`simulate_race`), the simulator also updates race pace with what qualifying
+revealed.
+
+`f1sim backtest --walk-forward` does the same for one season: before each race it
 refits using earlier rounds only, predicts, and scores against the real result.
 It reports the probability given to the real winner, log loss, Brier score,
 ranked probability score (RPS, 0 = perfect) and rank correlation of predicted
@@ -135,8 +160,9 @@ f1sim/season.py     championship simulation
 f1sim/evaluate.py   prediction scoring, backtesting, strategy comparison
 f1sim/datasource.py download a season of real results
 f1sim/fit.py        fit ratings from results; walk-forward testing
+f1sim/benchmark.py  multi-season benchmark against baselines; calibration
 f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
 f1sim/cli.py        command-line interface
-f1sim/data/         fitted 2026 grid, 2026 results, circuit parameters
+f1sim/data/         fitted 2026 grid, 2022–2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)
 ```

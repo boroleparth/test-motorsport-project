@@ -113,8 +113,16 @@ def fetch_season(year: int | str) -> dict:
             "races": sorted(races, key=lambda r: r["round"]), "standings": standings}
 
 
-def load_season(path: str | Path | None = None) -> dict:
-    """Load a season file (the bundled 2026 season if no path)."""
-    if path is None:
-        return json.loads(resources.files("f1sim").joinpath("data", "results_2026.json").read_text())
-    return json.loads(Path(path).read_text())
+def bundled_seasons() -> list[str]:
+    """Years of the season files shipped with the package, oldest first."""
+    data = resources.files("f1sim").joinpath("data")
+    return sorted(f.name[8:12] for f in data.iterdir() if f.name.startswith("results_") and f.name.endswith(".json"))
+
+
+def load_season(source: str | Path | int | None = None) -> dict:
+    """Load a season file: a path, a bundled year like 2024, or the latest bundled season."""
+    if source is None:
+        source = bundled_seasons()[-1]
+    if str(source) in bundled_seasons():
+        return json.loads(resources.files("f1sim").joinpath("data", f"results_{source}.json").read_text())
+    return json.loads(Path(source).read_text())

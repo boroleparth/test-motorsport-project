@@ -17,6 +17,7 @@ FUEL_PER_LAP = 0.03      # s of lap time per lap of fuel on board
 FOLLOW_GAP = 0.25        # minimum gap behind a car you failed to pass, s
 PASS_SCALE = 0.25        # softness of the pass-probability curve, s
 QUALI_SIGMA = 0.22       # one-lap noise, s
+QUALI_UPDATE = 0.4       # share of a qualifying surprise carried into race pace
 FORM_SIGMA = 0.3         # weekend-to-weekend swing in each team's car pace, s/lap
 GRID_SPACING = 0.3       # time gap per grid slot at the start, s
 START_SIGMA = 0.35      # first-lap scramble noise, s
@@ -138,12 +139,19 @@ def simulate_race(
     seed: int | None = None,
     strategies: dict[str, Strategy] | None = None,
     wet: bool | None = None,
+    start_grid: list[str] | None = None,
+    quali_times: dict[str, float] | None = None,
 ) -> RaceResult:
     """Simulate qualifying and the race ``n_sims`` times.
 
     ``strategies`` pins specific drivers (by code) to a fixed strategy; everyone
     else samples from the track's near-optimal strategies with pit-lap jitter.
     ``wet`` forces wet/dry; by default each simulation draws from ``track.rain_prob``.
+    ``start_grid`` fixes the starting order (driver codes, pole first) once
+    qualifying has happened; drivers not listed start behind, in simulated order.
+    ``quali_times`` (code -> best qualifying lap, s) updates race pace with what
+    qualifying revealed: a driver who was quicker than their rating predicted is
+    expected to be a little quicker in the race too.
     """
     rng = np.random.default_rng(seed)
     drivers = grid.drivers
@@ -161,12 +169,24 @@ def simulate_race(
     pit_delta = np.array([t.pit_mean - 2.5 for t in teams])
     pit_sigma = np.array([t.pit_sigma for t in teams])
 
+    if quali_times:
+        times = np.array([quali_times.get(d.code) or np.nan for d in drivers], dtype=float)
+        seen = np.isfinite(times)
+        if seen.sum() >= 3:
+            observed = (times / np.nanmin(times) - 1) * track.base_lap
+            expected = np.array([t.pace for t in teams]) + np.array([d.quali_pace for d in drivers])
+            surprise = (observed - np.median(observed[seen])) - (expected - np.median(expected[seen]))
+            drv = drv + QUALI_UPDATE * np.where(seen, np.clip(surprise, -1.5, 1.5), 0.0)
+
     is_wet = np.full(S, bool(wet)) if wet is not None else rng.random(S) < track.rain_prob
     w = is_wet[:, None]
 
     # --- qualifying -------------------------------------------------------
     q = car + np.array([d.quali_pace for d in drivers]) + w * wet_skill
     q = q + rng.normal(0, QUALI_SIGMA, (S, N)) * np.where(w, 2.0, 1.0)
+    if start_grid:
+        slot = {c.upper(): i for i, c in enumerate(start_grid)}
+        q = np.array([slot.get(d.code, len(slot)) for d in drivers]) * 1e3 + q
     grid_pos = q.argsort(1).argsort(1)
 
     # --- retirements ------------------------------------------------------

@@ -72,12 +72,15 @@ def _decompose(obs, teams, drivers, weights, ridge=3.0):
 
 
 def fit_grid(season: dict, base: Grid | None = None, through_round: int | None = None,
-             half_life: float = 4.0, race_weight: float = 0.3) -> Grid:
+             half_life: float = 4.0, race_weight: float = 0.3,
+             results_weight: float = 0.4) -> Grid:
     """Build a Grid from a season file.
 
     ``through_round`` uses only races up to that round (for out-of-sample tests).
     ``half_life`` is the number of rounds after which a race counts half as much.
     ``race_weight`` blends race-gap pace (1.0) with qualifying pace (0.0).
+    ``results_weight`` pulls each driver's race pace towards the order implied by
+    their average finishing position (0 = measured gaps only, 1 = finishing order only).
     ``base`` supplies values that results cannot identify (lap-time consistency,
     pit-stop times); defaults are used for anyone not in it.
     """
@@ -133,23 +136,45 @@ def fit_grid(season: dict, base: Grid | None = None, through_round: int | None =
     base_drivers = {d.code: d for d in base.drivers} if base else {}
     names = {**{c: d.name for c, d in base_drivers.items()}, **season.get("drivers", {})}
 
+    # Race pace per driver (car + driver), from measured gaps.
+    total = {c: blend(q_team[lineup[c]], r_team[lineup[c]]) + blend(q_drv[c], r_drv[c]) for c in lineup}
+    if results_weight > 0:
+        # Finishing positions say who beats whom more reliably than time gaps do,
+        # but not by how much. Keep the measured spread of pace and re-deal it in
+        # order of average finishing position, then blend the two.
+        num, den = {}, {}
+        for race in races:
+            finishers = [c for c in race["results"] if race["entries"][c]["finished"]]
+            for pos, code in enumerate(finishers):
+                num[code] = num.get(code, 0) + weights[race["round"]] * pos
+                den[code] = den.get(code, 0) + weights[race["round"]]
+        by_gap = sorted(lineup, key=lambda c: total[c])
+        avg = {c: num[c] / den[c] if den.get(c) else float(by_gap.index(c)) for c in lineup}
+        ladder = sorted(total.values())
+        dealt = {c: ladder[i] for i, c in enumerate(sorted(lineup, key=lambda c: avg[c]))}
+        total = {c: (1 - results_weight) * total[c] + results_weight * dealt[c] for c in lineup}
+    team_pace = {t: min(total[c] for c in lineup if lineup[c] == t) for t in teams}
+    best = min(team_pace.values())
+    team_pace = {t: v - best for t, v in team_pace.items()}
+    total = {c: v - best for c, v in total.items()}
+
     out_teams = {}
-    for t in sorted(teams, key=lambda t: blend(q_team[t], r_team[t])):
+    for t in sorted(teams, key=team_pace.get):
         b = base_teams.get(t, Team(t))
-        out_teams[t] = Team(t, pace=round(blend(q_team[t], r_team[t]), 3),
-                            reliability=round(0.6 * rate(t), 3), pit_mean=b.pit_mean, pit_sigma=b.pit_sigma)
+        out_teams[t] = Team(t, pace=round(float(team_pace[t]), 3),
+                            reliability=round(float(0.6 * rate(t)), 3), pit_mean=b.pit_mean, pit_sigma=b.pit_sigma)
     # The simulator adds team.pace to both sessions, so the driver's qualifying
-    # number carries the difference between the car's one-lap and blended pace.
+    # number carries the difference between the car's one-lap and race pace.
     out_drivers = []
-    for code in sorted(lineup, key=lambda c: (list(out_teams).index(lineup[c]), r_drv[c])):
+    for code in sorted(lineup, key=lambda c: (list(out_teams).index(lineup[c]), total[c])):
         t = lineup[code]
         b = base_drivers.get(code)
         out_drivers.append(Driver(
             code=code, name=names.get(code, code), team=t,
-            pace=round(blend(q_drv[code], r_drv[code]), 3),
-            quali=round(q_drv[code] + q_team[t] - out_teams[t].pace, 3),
+            pace=round(float(total[code] - team_pace[t]), 3),
+            quali=round(float(q_drv[code] + q_team[t] - team_pace[t]), 3),
             consistency=b.consistency if b else 0.35, wet=0.0,
-            error_rate=round(0.4 * rate(code), 3),
+            error_rate=round(float(0.4 * rate(code)), 3),
         ))
     return Grid(out_teams, out_drivers)
 

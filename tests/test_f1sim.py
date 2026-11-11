@@ -23,7 +23,7 @@ def tracks():
 
 def test_bundled_data_loads(grid, tracks):
     assert len(grid.drivers) == 22 and len(grid.teams) == 11
-    assert len(tracks) == 25
+    assert len(tracks) == 27
     assert all(sum(d.team == t for d in grid.drivers) == 2 for t in grid.teams)
 
 
@@ -153,7 +153,9 @@ def test_backtest_and_cli(grid, tracks, tmp_path, capsys):
                  ["season", "--sims", "20", "--start", "qatar"], ["season", "--sims", "20"],
                  ["season", "--sims", "5", "--full"], ["fit", "--through", "8", "--out", str(tmp_path / "g.json")],
                  ["race", "monaco", "--sims", "20", "--grid", str(tmp_path / "g.json")],
-                 ["backtest", "--walk-forward", "--start-round", "18", "--sims", "50"], ["strategy", "monaco", "LEC", "--sims", "50"],
+                 ["backtest", "--walk-forward", "--start-round", "18", "--sims", "50"],
+                 ["benchmark", "--seasons", "2026", "--start-round", "18", "--sims", "50"],
+                 ["race", "monaco", "--sims", "20", "--start-grid", "VER,NOR"], ["strategy", "monaco", "LEC", "--sims", "50"],
                  ["backtest", str(f), "--sims", "50"]):
         main(argv)
         assert capsys.readouterr().out.strip()
@@ -200,10 +202,41 @@ def test_dashboard(grid, tracks, tmp_path, capsys):
         assert len(t["dist"]) == len(grid.drivers)
     assert sum(r["title"] for r in data["season"]["drivers"]) == pytest.approx(1, abs=0.01)
     assert set(data["strategy"]["drivers"]) == set(grid.codes)
-    json.dumps(data)                                   # everything is plain JSON
+    full = build_data(grid, {k: tracks[k] for k in list(tracks)[:23]}, load_season(), n_sims=100, seed=1,
+                      history=[load_season()])
+    assert len(full["accuracy"]["methods"]) == 4 and full["accuracy"]["races"]
+    json.dumps(full)                                   # everything is plain JSON
     page = render(data)
     assert page.startswith("<!doctype html>") and "__DATA__" not in page
     assert not render(data, standalone=False).startswith("<!doctype")
     out = tmp_path / "d.html"
-    main(["dashboard", "--sims", "200", "--out", str(out)])
+    main(["dashboard", "--sims", "200", "--quick", "--out", str(out)])
     assert "F1 Race" in out.read_text() and capsys.readouterr().out
+
+
+def test_start_grid_and_qualifying_update(grid, tracks):
+    order = grid.codes[::-1]                      # reverse of the rated order
+    res = simulate_race(grid, tracks["monaco"], 50, seed=1, start_grid=order)
+    assert (res.grid_positions == np.arange(len(order), 0, -1)).all()
+    partial = simulate_race(grid, tracks["monaco"], 50, seed=1, start_grid=order[:3])
+    assert (partial.grid_positions[:, [grid.index(c) for c in order[:3]]] == [1, 2, 3]).all()
+    # a backmarker who qualifies on pole by a mile is expected to race better than rated
+    slow = grid.codes[-1]
+    times = {c: 90.0 + i * 0.1 for i, c in enumerate(c for c in grid.codes if c != slow)}
+    times[slow] = 89.0
+    plain = simulate_race(grid, tracks["spain"], 400, seed=2, wet=False)
+    told = simulate_race(grid, tracks["spain"], 400, seed=2, wet=False, quali_times=times)
+    i = grid.index(slow)
+    assert told.positions[:, i].mean() < plain.positions[:, i].mean() - 0.5
+
+
+def test_benchmark(grid, tracks):
+    from f1sim.benchmark import METHODS, benchmark, summarise
+    out = benchmark([load_season(2025), load_season(2026)], tracks, grid, start=17, n_sims=200, seed=1)
+    assert out["n_races"] == len(out["races"]) > 5 and set(out["methods"]) == set(METHODS)
+    for m in METHODS:
+        assert 0 < out["methods"][m]["rps"] < 0.25 and 0 <= out["methods"][m]["favourite_won"] <= 1
+    assert summarise(out["races"], ["2026"])["n_races"] < out["n_races"]
+    for rows in out["calibration"].values():
+        assert sum(r["n"] for r in rows) >= 20 * out["n_races"]
+        assert all(0 <= r["observed"] <= 1 for r in rows)

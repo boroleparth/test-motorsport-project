@@ -8,7 +8,7 @@ from importlib import resources
 import numpy as np
 
 from .evaluate import compare_strategies
-from .fit import walk_forward
+from .benchmark import LABELS, METHODS, benchmark, summarise
 from .models import Grid, Track
 from .race import simulate_race
 from .season import simulate_season
@@ -20,7 +20,8 @@ def _r(x, digits: int = 4) -> float:
 
 
 def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
-               n_sims: int = 2000, seed: int | None = 0, accuracy: bool = True) -> dict:
+               n_sims: int = 2000, seed: int | None = 0, accuracy: bool = True,
+               history: list[dict] | None = None, holdout: tuple[str, ...] = ("2025", "2026")) -> dict:
     """Run every simulation the dashboard shows and return it as plain data."""
     seeds = np.random.SeedSequence(seed)
     codes = grid.codes
@@ -85,14 +86,23 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
 
     if accuracy and season and done > 6:
         (child,) = seeds.spawn(1)
-        wf = walk_forward(season, tracks, grid, start=5, n_sims=min(n_sims, 1500), seed=child)
-        names = {r["track"]: r["name"] for r in season["races"]}
+        seasons = history or [season]
+        bench = benchmark(seasons, tracks, grid, start=5, n_sims=min(n_sims, 1000), seed=child)
+        years = [s["season"] for s in seasons]
+        held = [y for y in years if y in holdout] if len(years) > 1 else years
+        means = summarise(bench["races"], held)
         data["accuracy"] = {
-            "mean": {k: _r(v) for k, v in wf["mean"].items()},
-            "races": [{"track": s["track"], "name": names.get(s["track"], s["track"]), "winner": s["winner"],
-                       "winner_prob": _r(s["winner_prob"]), "podium_hits": s["podium_hits"],
-                       "favourite": s["favourite"], "favourite_won": s["favourite"] == s["winner"]}
-                      for s in wf["races"]],
+            "n_races": means["n_races"], "seasons": held, "n_all": bench["n_races"], "all_seasons": years,
+            "tuned_on": [y for y in years if y not in held],
+            "methods": [{"label": LABELS[m], "model": m.startswith("model"),
+                         **{k: _r(v) for k, v in means[m].items()}} for m in METHODS],
+            "calibration": {e: [{"lo": r["lo"], "hi": r["hi"], "n": r["n"], "predicted": _r(r["predicted"]),
+                                 "observed": _r(r["observed"])} for r in rows]
+                            for e, rows in bench["calibration"].items()},
+            "races": [{"name": r["name"], "winner": r["winner"], "favourite": r["favourite"],
+                       "winner_prob": _r(r["model:winner_prob"]), "after_prob": _r(r["model+grid:winner_prob"]),
+                       "favourite_won": bool(r["model:favourite_won"])}
+                      for r in bench["races"] if r["season"] == season["season"]],
         }
     return data
 
@@ -109,5 +119,6 @@ def render(data: dict, standalone: bool = True) -> str:
 
 
 def build_dashboard(grid: Grid, tracks: dict[str, Track], season: dict | None = None, n_sims: int = 2000,
-                    seed: int | None = 0, standalone: bool = True, accuracy: bool = True) -> str:
-    return render(build_data(grid, tracks, season, n_sims, seed, accuracy), standalone)
+                    seed: int | None = 0, standalone: bool = True, accuracy: bool = True,
+                    history: list[dict] | None = None) -> str:
+    return render(build_data(grid, tracks, season, n_sims, seed, accuracy, history), standalone)

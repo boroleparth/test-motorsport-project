@@ -8,20 +8,25 @@ The bundled ratings are **fitted from real 2026 results** (rounds 1–20, from t
 public Jolpica/Ergast API), and the whole pipeline is benchmarked against
 simple baselines on races it has not seen.
 
-**Benchmark: 34 races from 2025–2026**, each predicted from earlier rounds of
-its season only. Model settings were tuned on 2022–2024, so these are held out.
+**Benchmark: 207 races, 2014–2026**, each predicted from earlier rounds of its
+season only (`f1sim benchmark`).
 
 | Method | Favourite won | Podium drivers found | Order match | Probability score (0 = perfect) |
 |---|---|---|---|---|
-| Simulator, before qualifying | 24% | 1.71 of 3 | 0.61 | 0.126 |
-| Baseline: championship order | 26% | 1.79 of 3 | 0.59 | 0.129 |
-| Simulator, after qualifying | 65% | 2.12 of 3 | 0.67 | 0.113 |
-| Baseline: starting grid order | 65% | 2.03 of 3 | 0.67 | 0.116 |
+| Simulator, before qualifying | 45% | 1.80 of 3 | 0.62 | 0.125 |
+| Baseline: championship order | 45% | 1.81 of 3 | 0.61 | 0.127 |
+| Simulator, after qualifying | 62% | 1.94 of 3 | 0.66 | 0.118 |
+| Baseline: starting grid order | 54% | 2.03 of 3 | 0.63 | 0.122 |
 
-Read honestly: the simulator is slightly ahead of the matching baseline on
-ranked probability score in both settings, and level on picking the winner.
-With 34 races those margins are small. The baselines are strong, and they are
-scored generously (see `f1sim/benchmark.py`). Reproduce with `f1sim benchmark`.
+- **After qualifying the simulator beats grid order**: ranked probability score
+  better by 0.0048, 95% paired-bootstrap interval 0.0021 to 0.0075, and its
+  favourite wins 62% of races against 54% for the pole-sitter.
+- **Before qualifying it is level with championship order**: better by 0.0013,
+  interval −0.0003 to 0.0029, which includes zero.
+- On the 34 races of 2025–2026, which were never used to choose a setting, the
+  pattern is the same (0.125 vs 0.130 before qualifying, 0.114 vs 0.117 after).
+- The baselines are scored generously (see `f1sim/benchmark.py`), and settings
+  were chosen on subsets of these seasons, so treat the margins as indicative.
 
 What is *not* measured: lap-time consistency, pit-stop times, wet-weather skill
 and the circuit parameters in `tracks.json` are assumptions. This is a
@@ -49,7 +54,7 @@ f1sim season --full --sims 1000                # whole calendar from zero points
 f1sim fetch 2026 --out season.json             # download real results (needs network)
 f1sim fit --season-file season.json --out grid.json   # fit ratings from them
 f1sim race qatar --grid grid.json              # predict with your fitted ratings
-f1sim benchmark                                # simulator vs baselines over 2022–2026, plus calibration
+f1sim benchmark                                # simulator vs baselines over 2014–2026, with intervals and calibration
 f1sim race qatar --start-grid ANT,VER,RUS      # predict once the real grid is known
 f1sim backtest --walk-forward                  # predict each race of a season from earlier rounds
 f1sim backtest results.json                    # score fixed ratings against a results file
@@ -80,7 +85,7 @@ season.drivers()[:3]          # title probability, expected points, 5–95% rang
 you can open in a browser: race odds and finishing-position heatmap for any
 circuit, championship projection from the real standings, a pit-strategy
 comparison for each driver at the next race, the walk-forward accuracy record,
-and the fitted car and driver pace. It takes about a minute and a half at the
+and the fitted car and driver pace. It takes about three minutes at the
 default 2,000 simulations per circuit; `--quick` skips the multi-season
 accuracy section.
 
@@ -97,9 +102,10 @@ accuracy section.
   finishing position, which says who beats whom more reliably than time gaps;
 - **retirement rates** per team and driver, shrunk towards the field average.
 
-`f1sim benchmark` runs that test over every bundled season (2022–2026) against
+`f1sim benchmark` runs that test over every bundled season (2014–2026) against
 two baselines, championship order and starting-grid order, and prints a
-calibration table (when the simulator says 30%, how often does it happen).
+calibration table (when the simulator says 30%, how often does it happen),
+with paired-bootstrap intervals on the difference from each baseline.
 Given the real grid and qualifying times (`start_grid`, `quali_times` in
 `simulate_race`), the simulator also updates race pace with what qualifying
 revealed.
@@ -135,7 +141,7 @@ lap time = circuit base lap + car pace + driver pace
 - **Safety cars** — random periods that neutralise lap times, bunch the field
   and halve pit loss; cars near their stop window pit opportunistically.
 - **Weekend form** — each team's car pace is shifted by a random amount per
-  weekend (0.3 s/lap spread, tuned on the walk-forward test), because cars suit
+  weekend (0.4 s/lap spread, chosen on 2014–2021), because cars suit
   some circuits better than others.
 - **Retirements** — mechanical (team `reliability`) and driver error (`error_rate`).
 - **Rain** — per-circuit probability; wet races add lap-time variance, more
@@ -163,6 +169,6 @@ f1sim/fit.py        fit ratings from results; walk-forward testing
 f1sim/benchmark.py  multi-season benchmark against baselines; calibration
 f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
 f1sim/cli.py        command-line interface
-f1sim/data/         fitted 2026 grid, 2022–2026 results, circuit parameters
+f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)
 ```

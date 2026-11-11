@@ -8,7 +8,7 @@ from importlib import resources
 import numpy as np
 
 from .evaluate import compare_strategies
-from .benchmark import LABELS, METHODS, benchmark, summarise
+from .benchmark import LABELS, METHODS, PAIRS, benchmark, compare, summarise
 from .models import Grid, Track
 from .race import simulate_race
 from .season import simulate_season
@@ -96,6 +96,8 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
             "tuned_on": [y for y in years if y not in held],
             "methods": [{"label": LABELS[m], "model": m.startswith("model"),
                          **{k: _r(v) for k, v in means[m].items()}} for m in METHODS],
+            "tests": [{"a": LABELS[a], "b": LABELS[b], **{k: _r(v, 5) for k, v in compare(bench["races"], a, b).items()
+                                                         if k in ("diff", "lo", "hi", "p_a_lower")}} for a, b in PAIRS],
             "calibration": {e: [{"lo": r["lo"], "hi": r["hi"], "n": r["n"], "predicted": _r(r["predicted"]),
                                  "observed": _r(r["observed"])} for r in rows]
                             for e, rows in bench["calibration"].items()},

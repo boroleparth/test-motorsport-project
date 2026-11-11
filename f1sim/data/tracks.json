@@ -27,6 +27,12 @@
     {"key": "bahrain", "name": "Sakhir", "laps": 57, "base_lap": 93.0, "pit_loss": 23.0, "overtake": 0.5, "sc_prob": 0.4, "rain_prob": 0.01, "deg": 1.35},
     {"key": "saudi", "name": "Jeddah", "laps": 50, "base_lap": 90.0, "pit_loss": 20.0, "overtake": 0.7, "sc_prob": 0.75, "rain_prob": 0.01, "deg": 0.8},
     {"key": "imola", "name": "Imola", "laps": 63, "base_lap": 77.5, "pit_loss": 27.0, "overtake": 1.5, "sc_prob": 0.55, "rain_prob": 0.2, "deg": 0.9},
-    {"key": "ricard", "name": "Paul Ricard", "laps": 53, "base_lap": 93.5, "pit_loss": 26.0, "overtake": 0.8, "sc_prob": 0.35, "rain_prob": 0.08, "deg": 1.2}
+    {"key": "ricard", "name": "Paul Ricard", "laps": 53, "base_lap": 93.5, "pit_loss": 26.0, "overtake": 0.8, "sc_prob": 0.35, "rain_prob": 0.08, "deg": 1.2},
+    {"key": "sochi", "name": "Sochi", "laps": 53, "base_lap": 96.0, "pit_loss": 24.0, "overtake": 1.1, "sc_prob": 0.6, "rain_prob": 0.1, "deg": 0.75},
+    {"key": "hockenheimring", "name": "Hockenheim", "laps": 67, "base_lap": 74.0, "pit_loss": 19.5, "overtake": 0.7, "sc_prob": 0.45, "rain_prob": 0.25, "deg": 1.0},
+    {"key": "portimao", "name": "Portimao", "laps": 66, "base_lap": 79.0, "pit_loss": 21.5, "overtake": 0.9, "sc_prob": 0.3, "rain_prob": 0.15, "deg": 0.9},
+    {"key": "istanbul", "name": "Istanbul Park", "laps": 58, "base_lap": 84.0, "pit_loss": 21.0, "overtake": 0.7, "sc_prob": 0.4, "rain_prob": 0.3, "deg": 1.1},
+    {"key": "mugello", "name": "Mugello", "laps": 59, "base_lap": 78.0, "pit_loss": 21.5, "overtake": 1.3, "sc_prob": 0.6, "rain_prob": 0.1, "deg": 1.2},
+    {"key": "nurburgring", "name": "Nurburgring", "laps": 60, "base_lap": 87.0, "pit_loss": 21.0, "overtake": 0.8, "sc_prob": 0.5, "rain_prob": 0.3, "deg": 1.0}
   ]
 }

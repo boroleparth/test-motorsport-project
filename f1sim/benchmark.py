@@ -126,3 +126,24 @@ def summarise(races: list[dict], seasons: list[str] | None = None) -> dict:
     rows = [r for r in races if seasons is None or r["season"] in seasons]
     keys = sorted({k.split(":", 1)[1] for k in rows[0] if ":" in k}) if rows else []
     return {m: {k: float(np.mean([r[f"{m}:{k}"] for r in rows])) for k in keys} for m in METHODS} | {"n_races": len(rows)}
+
+
+PAIRS = (("model", "standings"), ("model+grid", "grid"))
+
+
+def compare(races: list[dict], a: str, b: str, metric: str = "rps", seasons: list[str] | None = None,
+            n_boot: int = 10000, seed: int = 0) -> dict:
+    """Paired bootstrap of ``metric(a) - metric(b)`` over races.
+
+    Races are resampled with replacement, keeping each race's two scores
+    together, so the interval reflects race-to-race luck. Returns the mean
+    difference, its 95% interval, and the share of resamples in which ``a``
+    had the lower value (``p_a_lower``).
+    """
+    rows = [r for r in races if seasons is None or r["season"] in seasons]
+    diff = np.array([r[f"{a}:{metric}"] - r[f"{b}:{metric}"] for r in rows], dtype=float)
+    rng = np.random.default_rng(seed)
+    means = diff[rng.integers(0, len(diff), (n_boot, len(diff)))].mean(1)
+    lo, hi = np.percentile(means, [2.5, 97.5])
+    return {"a": a, "b": b, "metric": metric, "n_races": len(rows), "diff": float(diff.mean()),
+            "lo": float(lo), "hi": float(hi), "p_a_lower": float((means < 0).mean())}

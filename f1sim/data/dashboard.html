@@ -318,7 +318,8 @@ function renderStatic() {
       A.methods.map(m => `<tr class="${m.model ? "best" : ""}"><td>${esc(m.label)}</td>${cell(m, "favourite_won", 1, pct)}${cell(m, "winner_prob", 1, pct)}
         ${cell(m, "podium_hits", 1, v => v.toFixed(2) + " of 3")}${cell(m, "spearman", 1, v => v.toFixed(2))}${cell(m, "rps", 0, v => v.toFixed(3))}</tr>`).join("");
     $("accnote").textContent = `Bold is the best in each column. Order match: 1 is a perfect finishing order. Probability score (ranked probability score): 0 is perfect. Compare the simulator before qualifying with championship order, and after qualifying with grid order.` +
-      (A.tuned_on.length ? ` Model settings were tuned on ${A.tuned_on.join(", ")} only, so these seasons are a fair test.` : "");
+      (A.tuned_on.length ? ` No model setting was chosen using these seasons.` : "") +
+      (A.tests || []).map(t => ` Over all ${A.n_all} races (${A.all_seasons[0]}–${A.all_seasons[A.all_seasons.length - 1]}), ${t.a.toLowerCase()} against ${t.b.toLowerCase().replace("baseline: ", "")}: probability score ${t.diff < 0 ? "better" : "worse"} by ${Math.abs(t.diff).toFixed(4)} (95% interval ${t.lo.toFixed(4)} to ${t.hi.toFixed(4)}).`).join("");
     const top = Math.max(...A.races.map(r => r.winner_prob), 0.1), base = 1 / D.drivers.length;
     $("acccols").innerHTML = A.races.map(r => `<div class="col${r.favourite_won ? " top" : ""}" data-tip="${esc(r.name)}\nWinner ${r.winner}: given ${pct(r.winner_prob)}\nAfter qualifying: ${pct(r.after_prob)}\nSimulator's favourite: ${r.favourite}">
       <span>${Math.round(r.winner_prob * 100)}</span><i style="height:${r.winner_prob / top * 82}%"></i></div>`).join("") +

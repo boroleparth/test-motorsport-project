@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from .benchmark import LABELS, METHODS, benchmark, summarise
+from .benchmark import LABELS, METHODS, PAIRS, benchmark, compare, summarise
 from .dashboard import build_dashboard
 from .datasource import bundled_seasons, fetch_season, load_season
 from .evaluate import backtest, compare_strategies
@@ -122,15 +122,21 @@ def cmd_benchmark(args, grid, tracks):
     cols = [("label", "method", "s"), ("favourite_won", "fav. won", "pct"), ("winner_prob", "P(winner)", "pct"),
             ("log_loss", "logloss", "f2"), ("rps", "RPS", "f3"), ("spearman", "order", "f2"), ("podium_hits", "podium/3", "f2")]
     groups = [("All seasons", None)]
-    if args.holdout:
+    if args.holdout and any(y in args.holdout for y in map(str, years)) and not all(y in args.holdout for y in map(str, years)):
         groups = [(f"Held-out seasons ({', '.join(args.holdout)})", args.holdout),
-                  ("Other seasons", [y for y in map(str, years) if y not in args.holdout])]
+                  ("Other seasons", [y for y in map(str, years) if y not in args.holdout]),
+                  ("All seasons", None)]
     for title, subset in groups:
         means = summarise(out["races"], subset)
         if not means["n_races"]:
             continue
         print(f"{title}: {means['n_races']} races, each predicted from earlier rounds only\n")
         print(_table([{"label": LABELS[m], **means[m]} for m in METHODS], cols))
+        print()
+        for a, b in PAIRS:
+            c = compare(out["races"], a, b, "rps", subset)
+            print(f"  {LABELS[a]} vs {LABELS[b].lower()}: RPS difference {c['diff']:+.4f} "
+                  f"(95% interval {c['lo']:+.4f} to {c['hi']:+.4f}); simulator better in {100 * c['p_a_lower']:.0f}% of resamples")
         print()
     print("Calibration of the simulator before qualifying (podium finishes)\n")
     print(_table([{"range": f"{100 * r['lo']:.0f}-{100 * r['hi']:.0f}%", **r} for r in out["calibration"]["podium"]],

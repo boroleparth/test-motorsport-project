@@ -23,7 +23,7 @@ def tracks():
 
 def test_bundled_data_loads(grid, tracks):
     assert len(grid.drivers) == 22 and len(grid.teams) == 11
-    assert len(tracks) == 27
+    assert len(tracks) == 33
     assert all(sum(d.team == t for d in grid.drivers) == 2 for t in grid.teams)
 
 
@@ -154,7 +154,7 @@ def test_backtest_and_cli(grid, tracks, tmp_path, capsys):
                  ["season", "--sims", "5", "--full"], ["fit", "--through", "8", "--out", str(tmp_path / "g.json")],
                  ["race", "monaco", "--sims", "20", "--grid", str(tmp_path / "g.json")],
                  ["backtest", "--walk-forward", "--start-round", "18", "--sims", "50"],
-                 ["benchmark", "--seasons", "2026", "--start-round", "18", "--sims", "50"],
+                 ["benchmark", "--seasons", "2026", "--start-round", "18", "--sims", "50", "--holdout", "2026"],
                  ["race", "monaco", "--sims", "20", "--start-grid", "VER,NOR"], ["strategy", "monaco", "LEC", "--sims", "50"],
                  ["backtest", str(f), "--sims", "50"]):
         main(argv)
@@ -237,6 +237,9 @@ def test_benchmark(grid, tracks):
     for m in METHODS:
         assert 0 < out["methods"][m]["rps"] < 0.25 and 0 <= out["methods"][m]["favourite_won"] <= 1
     assert summarise(out["races"], ["2026"])["n_races"] < out["n_races"]
+    from f1sim.benchmark import compare
+    c = compare(out["races"], "model+grid", "grid", n_boot=500)
+    assert c["lo"] <= c["diff"] <= c["hi"] and 0 <= c["p_a_lower"] <= 1 and c["n_races"] == out["n_races"]
     for rows in out["calibration"].values():
         assert sum(r["n"] for r in rows) >= 20 * out["n_races"]
         assert all(0 <= r["observed"] <= 1 for r in rows)

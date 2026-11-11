@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f1sim"
+version = "0.1.0"
+description = "Monte Carlo Formula 1 race and season simulator for prediction and strategy testing"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+f1sim = "f1sim.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["f1sim*"]
+
+[tool.setuptools.package-data]
+f1sim = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

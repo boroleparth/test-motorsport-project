@@ -1,0 +1,40 @@
+{
+  "_note": "Illustrative ratings, NOT fitted to real data. pace/quali are seconds-per-lap deficits (lower is faster). Edit freely.",
+  "teams": [
+    {"name": "McLaren",      "pace": 0.00, "reliability": 0.03, "pit_mean": 2.3, "pit_sigma": 0.35},
+    {"name": "Mercedes",     "pace": 0.05, "reliability": 0.04, "pit_mean": 2.4, "pit_sigma": 0.40},
+    {"name": "Red Bull",     "pace": 0.10, "reliability": 0.04, "pit_mean": 2.2, "pit_sigma": 0.35},
+    {"name": "Ferrari",      "pace": 0.15, "reliability": 0.04, "pit_mean": 2.3, "pit_sigma": 0.40},
+    {"name": "Williams",     "pace": 0.55, "reliability": 0.05, "pit_mean": 2.6, "pit_sigma": 0.50},
+    {"name": "Aston Martin", "pace": 0.60, "reliability": 0.06, "pit_mean": 2.6, "pit_sigma": 0.50},
+    {"name": "Racing Bulls", "pace": 0.70, "reliability": 0.05, "pit_mean": 2.5, "pit_sigma": 0.45},
+    {"name": "Haas",         "pace": 0.75, "reliability": 0.05, "pit_mean": 2.7, "pit_sigma": 0.55},
+    {"name": "Alpine",       "pace": 0.85, "reliability": 0.06, "pit_mean": 2.7, "pit_sigma": 0.55},
+    {"name": "Audi",         "pace": 0.90, "reliability": 0.07, "pit_mean": 2.5, "pit_sigma": 0.50},
+    {"name": "Cadillac",     "pace": 1.30, "reliability": 0.08, "pit_mean": 2.9, "pit_sigma": 0.65}
+  ],
+  "drivers": [
+    {"code": "NOR", "name": "Lando Norris",      "team": "McLaren",      "pace": 0.08, "quali": 0.05, "consistency": 0.32, "wet": 0.05, "error_rate": 0.03},
+    {"code": "PIA", "name": "Oscar Piastri",     "team": "McLaren",      "pace": 0.10, "quali": 0.10, "consistency": 0.30, "wet": 0.10, "error_rate": 0.03},
+    {"code": "RUS", "name": "George Russell",    "team": "Mercedes",     "pace": 0.10, "quali": 0.05, "consistency": 0.32, "wet": 0.05, "error_rate": 0.03},
+    {"code": "ANT", "name": "Kimi Antonelli",    "team": "Mercedes",     "pace": 0.22, "quali": 0.20, "consistency": 0.40, "wet": 0.10, "error_rate": 0.05},
+    {"code": "VER", "name": "Max Verstappen",    "team": "Red Bull",     "pace": 0.00, "quali": 0.00, "consistency": 0.28, "wet": -0.15, "error_rate": 0.02},
+    {"code": "HAD", "name": "Isack Hadjar",      "team": "Red Bull",     "pace": 0.25, "quali": 0.20, "consistency": 0.38, "wet": 0.10, "error_rate": 0.05},
+    {"code": "LEC", "name": "Charles Leclerc",   "team": "Ferrari",      "pace": 0.08, "quali": 0.02, "consistency": 0.32, "wet": 0.05, "error_rate": 0.03},
+    {"code": "HAM", "name": "Lewis Hamilton",    "team": "Ferrari",      "pace": 0.15, "quali": 0.18, "consistency": 0.32, "wet": -0.10, "error_rate": 0.03},
+    {"code": "ALB", "name": "Alexander Albon",   "team": "Williams",     "pace": 0.18, "quali": 0.15, "consistency": 0.34, "wet": 0.05, "error_rate": 0.04},
+    {"code": "SAI", "name": "Carlos Sainz",      "team": "Williams",     "pace": 0.15, "quali": 0.15, "consistency": 0.32, "wet": 0.05, "error_rate": 0.03},
+    {"code": "ALO", "name": "Fernando Alonso",   "team": "Aston Martin", "pace": 0.15, "quali": 0.15, "consistency": 0.30, "wet": -0.05, "error_rate": 0.03},
+    {"code": "STR", "name": "Lance Stroll",      "team": "Aston Martin", "pace": 0.40, "quali": 0.45, "consistency": 0.40, "wet": 0.00, "error_rate": 0.05},
+    {"code": "LAW", "name": "Liam Lawson",       "team": "Racing Bulls", "pace": 0.30, "quali": 0.30, "consistency": 0.38, "wet": 0.10, "error_rate": 0.05},
+    {"code": "LIN", "name": "Arvid Lindblad",    "team": "Racing Bulls", "pace": 0.40, "quali": 0.38, "consistency": 0.42, "wet": 0.15, "error_rate": 0.06},
+    {"code": "OCO", "name": "Esteban Ocon",      "team": "Haas",         "pace": 0.27, "quali": 0.28, "consistency": 0.34, "wet": 0.00, "error_rate": 0.04},
+    {"code": "BEA", "name": "Oliver Bearman",    "team": "Haas",         "pace": 0.27, "quali": 0.25, "consistency": 0.38, "wet": 0.10, "error_rate": 0.05},
+    {"code": "GAS", "name": "Pierre Gasly",      "team": "Alpine",       "pace": 0.20, "quali": 0.18, "consistency": 0.34, "wet": 0.00, "error_rate": 0.04},
+    {"code": "COL", "name": "Franco Colapinto",  "team": "Alpine",       "pace": 0.40, "quali": 0.40, "consistency": 0.42, "wet": 0.15, "error_rate": 0.06},
+    {"code": "HUL", "name": "Nico Hulkenberg",   "team": "Audi",         "pace": 0.22, "quali": 0.20, "consistency": 0.32, "wet": -0.05, "error_rate": 0.03},
+    {"code": "BOR", "name": "Gabriel Bortoleto", "team": "Audi",         "pace": 0.30, "quali": 0.28, "consistency": 0.38, "wet": 0.10, "error_rate": 0.05},
+    {"code": "PER", "name": "Sergio Perez",      "team": "Cadillac",     "pace": 0.30, "quali": 0.35, "consistency": 0.34, "wet": 0.05, "error_rate": 0.04},
+    {"code": "BOT", "name": "Valtteri Bottas",   "team": "Cadillac",     "pace": 0.30, "quali": 0.28, "consistency": 0.34, "wet": 0.05, "error_rate": 0.04}
+  ]
+}

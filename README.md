@@ -1,5 +1,9 @@
 # f1sim — Formula 1 race & season simulator
 
+[![Tests](https://github.com/boroleparth/test-motorsport-project/actions/workflows/tests.yml/badge.svg)](https://github.com/boroleparth/test-motorsport-project/actions/workflows/tests.yml)
+
+**Live dashboard: https://boroleparth.github.io/test-motorsport-project/**
+
 A Monte Carlo simulator for **predicting** F1 races and championships and for
 **testing** ideas (pit strategies, car upgrades, "what if it rains?") against a
 consistent model. Pure Python + NumPy; 2,000 full race simulations take well under a second.
@@ -35,7 +39,8 @@ statistical simulator, not a neural network — see "How the model works".
 ## Install
 
 ```bash
-cd f1-simulator
+git clone https://github.com/boroleparth/test-motorsport-project
+cd test-motorsport-project
 pip install -e ".[dev]"
 ```
 
@@ -88,6 +93,12 @@ comparison for each driver at the next race, the walk-forward accuracy record,
 and the fitted car and driver pace. It takes about three minutes at the
 default 2,000 simulations per circuit; `--quick` skips the multi-season
 accuracy section.
+
+The live site is rebuilt by `.github/workflows/pages.yml` on every push to
+`main` and every Monday morning: it downloads the current season's results,
+refits the ratings and republishes (`scripts/build_site.py`). The updated data
+is not committed back, so run the script locally and commit when you want the
+bundled data refreshed.
 
 ## Fitting and testing against reality
 
@@ -171,4 +182,6 @@ f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)
+scripts/            build_site.py: refresh data and build the website
+.github/workflows/  tests on every push; dashboard publishing to GitHub Pages
 ```

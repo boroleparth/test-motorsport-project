@@ -100,6 +100,19 @@ refits the ratings and republishes (`scripts/build_site.py`). The updated data
 is not committed back, so run the script locally and commit when you want the
 bundled data refreshed.
 
+### What-if lab
+
+The dashboard includes a what-if lab that runs the simulator in the visitor's
+browser: pick a race, force rain, change a car's pace, set a driver's pit
+strategy or starting position, and compare the result with the forecast. Each
+run simulates the race with and without the changes using the same random
+draws, so the differences come from the changes, not from sampling noise.
+
+The browser engine is `f1sim/data/engine.js`, a port of `f1sim/race.py` that
+reads every parameter from the Python side (`export_model` in
+`f1sim/dashboard.py`). `tests/test_engine_js.py` runs it under Node and checks
+that it agrees with the Python engine.
+
 ## Fitting and testing against reality
 
 `f1sim fetch` saves a season (results, qualifying times, standings) as JSON.
@@ -179,6 +192,7 @@ f1sim/datasource.py download a season of real results
 f1sim/fit.py        fit ratings from results; walk-forward testing
 f1sim/benchmark.py  multi-season benchmark against baselines; calibration
 f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
+f1sim/data/engine.js the race engine in JavaScript, for the what-if lab
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)

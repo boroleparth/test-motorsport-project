@@ -55,6 +55,7 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
         "teams": [{"name": t.name, "pace": _r(t.pace, 3), "reliability": _r(t.reliability, 3)}
                   for t in sorted(grid.teams.values(), key=lambda t: t.pace)],
         "tracks": out_tracks, "season": None, "strategy": None, "accuracy": None,
+        "model": export_model(grid, tracks),
     }
     # one-lap gap is shown relative to the quickest qualifier
     best_q = min(d["quali_gap"] for d in data["drivers"])
@@ -111,8 +112,11 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
 
 def render(data: dict, standalone: bool = True) -> str:
     """Fill the HTML template. ``standalone=False`` returns a fragment without <html>/<body>."""
-    template = resources.files("f1sim").joinpath("data", "dashboard.html").read_text()
-    page = template.replace("__DATA__", json.dumps(data, separators=(",", ":")).replace("</", "<\\/"))
+    files = resources.files("f1sim").joinpath("data")
+    engine = files.joinpath("engine.js").read_text()
+    page = (files.joinpath("dashboard.html").read_text()
+            .replace("/*__ENGINE__*/", engine)
+            .replace("__DATA__", json.dumps(data, separators=(",", ":")).replace("</", "<\\/")))
     if not standalone:
         return page
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -124,3 +128,33 @@ def build_dashboard(grid: Grid, tracks: dict[str, Track], season: dict | None = 
                     seed: int | None = 0, standalone: bool = True, accuracy: bool = True,
                     history: list[dict] | None = None) -> str:
     return render(build_data(grid, tracks, season, n_sims, seed, accuracy, history), standalone)
+
+
+def export_model(grid: Grid, tracks: dict[str, Track]) -> dict:
+    """Everything the JavaScript engine (data/engine.js) needs, from the Python side."""
+    from . import race as R
+    from . import strategy as T
+
+    team_names = list(grid.teams)
+    model = {
+        "constants": {k: float(getattr(R, k)) for k in (
+            "FUEL_PER_LAP", "FOLLOW_GAP", "PASS_SCALE", "QUALI_SIGMA", "FORM_SIGMA", "GRID_SPACING",
+            "START_SIGMA", "SC_LAP_FACTOR", "SC_PIT_FACTOR", "SC_GAP", "WET_LAP_FACTOR", "WET_NOISE", "WET_ERROR")},
+        "tyres": {"offset": T.OFFSET.tolist(), "wear": T.WEAR.tolist(), "life": T.LIFE.tolist(), "cliff": T.CLIFF},
+        "teams": [{"name": t.name, "pace": t.pace, "reliability": t.reliability,
+                   "pit_mean": t.pit_mean, "pit_sigma": t.pit_sigma} for t in grid.teams.values()],
+        "drivers": [{"code": d.code, "team": team_names.index(d.team), "pace": d.pace, "quali": d.quali_pace,
+                     "consistency": d.consistency, "wet": d.wet, "error_rate": d.error_rate} for d in grid.drivers],
+        "tracks": {},
+    }
+    model["constants"]["POINTS"] = R.POINTS.tolist()
+    for key, track in tracks.items():
+        options, weights = R._default_options(track)
+        model["tracks"][key] = {
+            "name": track.name, "laps": track.laps, "base_lap": track.base_lap, "pit_loss": track.pit_loss,
+            "overtake": track.overtake, "sc_prob": track.sc_prob, "rain_prob": track.rain_prob, "deg": track.deg,
+            "options": [{"comps": [T.COMPOUNDS.index(c) for c in s.compounds], "pits": list(s.pit_laps),
+                         "label": str(s), "weight": float(w)} for s, w in zip(options, weights)],
+            "candidates": [str(s) for s in optimal_strategies(track, top=6)],
+        }
+    return model

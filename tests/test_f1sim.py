@@ -111,9 +111,9 @@ def test_optimal_strategies(tracks):
 
 
 def test_bad_strategy_is_punished(grid, tracks):
-    rows = compare_strategies(grid, tracks["bahrain"], "VER",
-                              [Strategy.parse("M-H@24"), Strategy.parse("S-H@50")], n_sims=400)
-    assert rows[0]["strategy"] == "M-H@24"
+    best = optimal_strategies(tracks["bahrain"], top=1)[0]
+    rows = compare_strategies(grid, tracks["bahrain"], "VER", [best, Strategy.parse("S-H@50")], n_sims=400)
+    assert rows[0]["strategy"] == str(best)
     assert rows[0]["exp_points"] > rows[1]["exp_points"] + 3
     with pytest.raises(ValueError):
         simulate_race(grid, tracks["bahrain"], 10, strategies={"VER": Strategy.parse("M-H@80")})

@@ -179,6 +179,36 @@ tyres age, because fuel burn-off almost cancels wear), and the direct fit
 predicted 2026 stints worse than assuming no change at all. The race-prediction
 benchmark is unchanged by the new circuit values.
 
+## Mid-race prediction
+
+`f1sim/live.py` picks up a race from any lap's real state: gaps, tyre compound
+and age, stops made, which compounds each car has used (the two-compound
+rule), safety-car status and retirements. Each car's current pace comes from
+its own recent clean laps, blended with its pre-race rating early on, and tyre
+wear from the race's own completed stints. `simulate_from` runs the remaining
+laps many times, with each car following one of its best remaining plans;
+`plan_options` lists those plans, which the pit advisor will compare.
+
+`f1sim/winprob.py` gives live win odds from five features of the race state
+(gap per lap remaining, running position, share of the race left, current
+pace). Tested on every 5th lap of the 2025 and 2026 races after training on
+2023–2024:
+
+| Method | Log loss (lower is better) | Favourite won |
+|---|---|---|
+| Learned model (`winprob`) | 0.79 | 72% |
+| Simulator from the same states | 0.95 | 68% |
+| "The current leader wins" | 1.98 | 71% |
+
+Both the learned model and the simulator are well calibrated (when the
+simulator says 59% it happens 58% of the time). Adding the simulator's odds to
+the learned model did not improve it, so the learned model gives the win odds
+and the simulator answers what-if questions such as "what if he pits now?".
+
+One bug found along the way: the pre-race tyre model's sudden "cliff" for old
+tyres gave cars on long stints a phantom speed-up once they pitted, because
+their real lap times showed no cliff. Mid-race, tyres wear steadily instead.
+
 ## How the model works
 
 Each simulation runs qualifying, then the race lap by lap for every car:
@@ -226,6 +256,8 @@ f1sim/fit.py        fit ratings from results; walk-forward testing
 f1sim/benchmark.py  multi-season benchmark against baselines; calibration
 f1sim/laps.py       lap-by-lap race data from OpenF1 (2023 onward)
 f1sim/tyres.py      pit-stop loss, tyre wear and strategy calibration from lap data
+f1sim/live.py       simulate the rest of a race from any lap's real state
+f1sim/winprob.py    live win probability; weights in f1sim/data/winprob.json
 f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
 f1sim/data/engine.js the race engine in JavaScript, for the what-if lab
 f1sim/cli.py        command-line interface

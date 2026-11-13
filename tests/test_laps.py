@@ -79,3 +79,12 @@ def test_fits_on_real_laps(season):
     key = "italy" if "italy" in target else next(iter(target))
     deg = calibrate_tracks(load_tracks(), {key: target[key]})
     assert 0.3 <= deg[key] <= 2.5
+
+
+def test_safety_car_rates(season):
+    from f1sim.tyres import safety_car_rates
+    field, rates = safety_car_rates(season, prior=20)
+    assert 0.2 < field < 0.9 and len(rates) >= 15
+    assert all(abs(p - field) < 0.15 for p in rates.values())  # strongly shrunk towards the field rate
+    raw_field, raw = safety_car_rates(season, prior=0)
+    assert raw_field == field and all(p in (0.0, 1.0) for p in raw.values())  # one race per circuit

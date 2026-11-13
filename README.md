@@ -166,6 +166,13 @@ parameters from data instead of estimates:
   (previously 17), but it does not carry over to 2026's new cars (12 of 18
   either way), so the current rules era is used wherever it has data.
 
+- **Safety-car odds**: about half of races since 2023 had a full safety car
+  or red flag. With three races per circuit, which circuits get them is close
+  to unpredictable: on 2026 the field-wide rate predicted better than either
+  each circuit's history or the old estimates, so every circuit gets the field
+  rate nudged slightly towards its own history (43–57%). Virtual safety cars
+  (46% of races) are not simulated yet.
+
 Measuring tyre wear directly from lap times was tried and dropped: within a
 stint, real lap times are nearly flat (typically 0.00–0.04 s a lap slower as
 tyres age, because fuel burn-off almost cancels wear), and the direct fit

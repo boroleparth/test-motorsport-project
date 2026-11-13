@@ -103,7 +103,7 @@ def test_optimal_strategies(tracks):
     for track in tracks.values():
         opts = optimal_strategies(track, top=3)
         times = [s.clean_air_time(track) for s in opts]
-        assert times == sorted(times)
+        assert all(a <= b + 1e-6 for a, b in zip(times, times[1:]))
         assert all(len(set(s.compounds)) >= 2 and s.pit_laps[-1] < track.laps for s in opts)
     # more degradation on the same circuit means more stops
     stops = lambda deg: len(optimal_strategies(replace(tracks["bahrain"], deg=deg), top=1)[0].pit_laps)

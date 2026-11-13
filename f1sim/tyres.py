@@ -202,3 +202,58 @@ def stint_error(rows: list[dict], offset: dict, wear: dict, fuel: float, deg: di
         e = e[np.abs(e) < 3]  # ignore traffic and incidents
         errs.extend(e.tolist())
     return float(np.sqrt(np.mean(np.square(errs)))) if errs else float("nan")
+
+
+def real_strategies(rows: list[dict], top: int = 10) -> dict[str, dict]:
+    """What teams actually did, per circuit: stop counts and first-stop timing.
+
+    Uses dry races and drivers classified in the top ``top``. Returns, per track,
+    the median number of stops and the median first stop as a fraction of race
+    distance.
+    """
+    wet = {(r["season"], r["round"]) for r in rows if r["rain"]}
+    stops, first, final = defaultdict(int), {}, {}
+    for r in rows:
+        k = (r["season"], r["round"], r["track"], r["driver"])
+        if r["pit_in"] and 1 < r["lap"] < r["laps_total"]:
+            stops[k] += 1
+            first.setdefault(k, r["lap"] / r["laps_total"])
+        if r["final_position"]:
+            final[k] = r["final_position"]
+    out = defaultdict(lambda: {"stops": [], "first": []})
+    for k, pos in final.items():
+        if pos <= top and (k[0], k[1]) not in wet and stops[k] >= 1:
+            out[k[2]]["stops"].append(stops[k])
+            out[k[2]]["first"].append(first[k])
+    return {t: {"stops": float(np.median(v["stops"])), "first": float(np.median(v["first"])), "n": len(v["stops"])}
+            for t, v in out.items() if len(v["stops"]) >= 8}
+
+
+def calibrate_tracks(tracks: dict, target: dict[str, dict], pit_loss: dict[str, float] | None = None,
+                     grid=tuple(np.round(np.arange(0.3, 2.51, 0.05), 2))) -> dict[str, float]:
+    """Wear multiplier per circuit that makes the simulator's fastest plan match real strategies.
+
+    For each circuit with a target, tries every value in ``grid`` and keeps the
+    one whose optimal strategy has the real number of stops and the closest
+    first-stop timing. ``pit_loss`` overrides the circuit's pit-lane loss first.
+    """
+    from dataclasses import replace
+
+    from .strategy import optimal_strategies
+
+    out = {}
+    for key, goal in target.items():
+        if key not in tracks:
+            continue
+        base = tracks[key]
+        if pit_loss and pit_loss.get(key):
+            base = replace(base, pit_loss=pit_loss[key])
+        best, best_cost = None, None
+        for deg in grid:
+            plan = optimal_strategies(replace(base, deg=float(deg)), top=1)[0]
+            n, f = len(plan.pit_laps), plan.pit_laps[0] / base.laps
+            cost = 3 * abs(n - goal["stops"]) + abs(f - goal["first"]) + 0.02 * abs(deg - 1.0)
+            if best_cost is None or cost < best_cost:
+                best, best_cost = float(deg), cost
+        out[key] = best
+    return out

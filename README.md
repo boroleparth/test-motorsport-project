@@ -146,6 +146,32 @@ vs actual order. Change the model, re-run, keep what improves the mean.
 [{"track": "monaco", "results": ["LEC", "PIA", "NOR"], "wet": false}]
 ```
 
+## Lap-by-lap data
+
+`f1sim/data/laps/` holds every lap of every Grand Prix since 2023 (about
+100,000 driver-laps from 90 races), downloaded from the public
+[OpenF1](https://openf1.org) API by `f1sim/laps.py`: lap time, running
+position, gaps, tyre compound and age, pit stops, safety-car status and rain.
+`load_laps()` reads it back.
+
+`f1sim/tyres.py` and `scripts/calibrate_tracks.py` use it to set two circuit
+parameters from data instead of estimates:
+
+- **Pit-stop loss**, measured from in-laps and out-laps. On 2026 races, values
+  measured from 2023–2025 are off by 2.1 s on average, against 2.7 s for the
+  previous estimates.
+- **Tyre-wear multiplier**, tuned so the simulator's fastest strategy matches
+  what teams actually ran (number of stops and when the first stop comes).
+  Tuned on 2023–2025, this gets the stop count right at 22 of 24 circuits
+  (previously 17), but it does not carry over to 2026's new cars (12 of 18
+  either way), so the current rules era is used wherever it has data.
+
+Measuring tyre wear directly from lap times was tried and dropped: within a
+stint, real lap times are nearly flat (typically 0.00–0.04 s a lap slower as
+tyres age, because fuel burn-off almost cancels wear), and the direct fit
+predicted 2026 stints worse than assuming no change at all. The race-prediction
+benchmark is unchanged by the new circuit values.
+
 ## How the model works
 
 Each simulation runs qualifying, then the race lap by lap for every car:
@@ -191,11 +217,14 @@ f1sim/evaluate.py   prediction scoring, backtesting, strategy comparison
 f1sim/datasource.py download a season of real results
 f1sim/fit.py        fit ratings from results; walk-forward testing
 f1sim/benchmark.py  multi-season benchmark against baselines; calibration
+f1sim/laps.py       lap-by-lap race data from OpenF1 (2023 onward)
+f1sim/tyres.py      pit-stop loss, tyre wear and strategy calibration from lap data
 f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
 f1sim/data/engine.js the race engine in JavaScript, for the what-if lab
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters
 tests/              pytest suite (run `pytest`)
-scripts/            build_site.py: refresh data and build the website
+scripts/            build_site.py: refresh data and build the website;
+                    calibrate_tracks.py: set circuit values from lap data
 .github/workflows/  tests on every push; dashboard publishing to GitHub Pages
 ```

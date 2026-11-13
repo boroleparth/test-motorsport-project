@@ -19,7 +19,7 @@ f1sim = "f1sim.cli:main"
 include = ["f1sim*"]
 
 [tool.setuptools.package-data]
-f1sim = ["data/*.json", "data/*.html", "data/*.js"]
+f1sim = ["data/*.json", "data/*.html", "data/*.js", "data/laps/*.csv.gz"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

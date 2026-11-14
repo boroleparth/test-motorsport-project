@@ -11,7 +11,7 @@ function initHome() {
       !H.acc ? "How the predictions compare with real results."
         : `Once qualifying is known, its odds ${H.acc.hi < 0 ? "beat" : "match"} "everyone finishes where they start" over ${H.acc.races} races since ${H.acc.first}, each predicted before it was run${H.acc.hi < 0 ? ", by a margin outside the error bars" : ""}.`,
       "Check the record"],
-    [null, "Race replay", "Coming soon", "Scrub through any race since 2023 lap by lap, with live win odds and pit-stop advice.", "In development"],
+    ["replay/", "Race replay", "Every race since 2023", "Step through any Grand Prix lap by lap with live win odds, and ask the pit advisor what each driver should have done.", "Replay a race"],
     [null, "Live", "Coming soon", "Win odds that update during a race.", "Planned"],
   ];
   $("cards").innerHTML = cards.map(([href, t, big, text, go]) => href

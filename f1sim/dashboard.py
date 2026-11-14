@@ -116,6 +116,7 @@ PAGES = [  # (folder, menu label, title, description)
      "Formula 1 race and championship predictions from a lap-by-lap simulator fitted to real results."),
     ("forecast", "Forecast", "Race Forecast", "Win, podium and points odds for every circuit, the championship and pit strategies."),
     ("lab", "What-if lab", "What-if Lab", "Rerun an F1 race in your browser with rain, pace, strategy or grid changes."),
+    ("replay", "Race replay", "Race Replay", "Step through any Grand Prix since 2023 with lap-by-lap win odds and a pit-stop advisor."),
     ("accuracy", "Accuracy", "Prediction Accuracy", "How the simulator's predictions compare with real results and simple baselines."),
 ]
 REPO = "https://github.com/boroleparth/test-motorsport-project"
@@ -133,6 +134,9 @@ def _page_data(data: dict, page: str) -> dict:
                 "tracks": [{k: t[k] for k in ("key", "name", "remaining")} for t in data["tracks"]]}
     if page == "accuracy":
         return pick("label", "drivers", "teams", "accuracy")
+    if page == "replay":
+        from .replay import engine_constants
+        return {"races": data.get("replays", []), "C": engine_constants()}
     # home: a summary of the other pages
     home = pick("label", "rounds_done", "rounds_total")
     track = next((t for t in data["tracks"] if t["key"] == data["next"]), None)
@@ -166,6 +170,8 @@ def render_page(data: dict, page: str) -> str:
     engine = ""
     if page == "lab":
         engine = "<script>\n" + resources.files("f1sim").joinpath("data", "engine.js").read_text() + "\n</script>\n"
+    if page == "replay":
+        engine = "<script>\n" + web.joinpath("replay-engine.js").read_text() + "\n</script>\n"
     blob = json.dumps(_page_data(data, page), separators=(",", ":")).replace("</", "<\\/")
     full_title = title if not page else f"{title} · F1 Race Simulator"
     return f"""<!doctype html>
@@ -202,10 +208,17 @@ const D = {blob};
 """
 
 
-def build_site(data: dict, out: str | Path) -> list[Path]:
-    """Write every page to ``out`` (index.html plus one folder per page)."""
+def build_site(data: dict, out: str | Path, replays: bool = True) -> list[Path]:
+    """Write every page to ``out`` (index.html plus one folder per page).
+
+    With ``replays``, also writes one data file per race to ``replay/data/``.
+    """
     out = Path(out)
     written = []
+    if replays:
+        from .models import load_tracks
+        from .replay import build_replays
+        data = {**data, "replays": build_replays(load_tracks(), out / "replay" / "data")}
     for folder, *_ in PAGES:
         path = out / folder / "index.html" if folder else out / "index.html"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,9 +230,9 @@ def build_site(data: dict, out: str | Path) -> list[Path]:
 
 def build_dashboard(grid: Grid, tracks: dict[str, Track], out: str | Path, season: dict | None = None,
                     n_sims: int = 2000, seed: int | None = 0, accuracy: bool = True,
-                    history: list[dict] | None = None) -> list[Path]:
+                    history: list[dict] | None = None, replays: bool = True) -> list[Path]:
     """Run every simulation and write the multi-page site to ``out``."""
-    return build_site(build_data(grid, tracks, season, n_sims, seed, accuracy, history), out)
+    return build_site(build_data(grid, tracks, season, n_sims, seed, accuracy, history), out, replays)
 
 
 def export_model(grid: Grid, tracks: dict[str, Track]) -> dict:

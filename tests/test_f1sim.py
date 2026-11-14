@@ -206,9 +206,9 @@ def test_dashboard(grid, tracks, tmp_path, capsys):
                       history=[load_season()])
     assert len(full["accuracy"]["methods"]) == 4 and full["accuracy"]["races"]
     json.dumps(full)                                   # everything is plain JSON
-    pages = build_site(data, tmp_path / "site")
+    pages = build_site(data, tmp_path / "site", replays=False)
     names = {p.relative_to(tmp_path / "site").as_posix() for p in pages}
-    assert names == {"index.html", "forecast/index.html", "lab/index.html", "accuracy/index.html"}
+    assert names == {"index.html", "forecast/index.html", "lab/index.html", "replay/index.html", "accuracy/index.html"}
     for p in pages:
         html = p.read_text()
         assert html.startswith("<!doctype html>") and 'aria-current="page"' in html and "Code on GitHub" in html
@@ -216,6 +216,7 @@ def test_dashboard(grid, tracks, tmp_path, capsys):
     assert "F1Sim" not in (tmp_path / "site/forecast/index.html").read_text()
     main(["dashboard", "--sims", "200", "--quick", "--out", str(tmp_path / "cli")])
     assert (tmp_path / "cli/index.html").exists() and capsys.readouterr().out
+    assert (tmp_path / "cli/replay/index.html").exists()
 
 
 def test_start_grid_and_qualifying_update(grid, tracks):

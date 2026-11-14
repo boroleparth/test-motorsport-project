@@ -95,11 +95,12 @@ joined by a shared menu:
 | [Home](https://boroleparth.github.io/test-motorsport-project/) | The next race at a glance and links to everything |
 | [Forecast](https://boroleparth.github.io/test-motorsport-project/forecast/) | Win, podium and points odds for any circuit, the championship projection, pit strategies compared |
 | [What-if lab](https://boroleparth.github.io/test-motorsport-project/lab/) | Rerun a race in your browser with rain, pace, strategy or grid changes |
+| [Race replay](https://boroleparth.github.io/test-motorsport-project/replay/) | Step through any Grand Prix since 2023 with lap-by-lap win odds and a pit advisor |
 | [Accuracy](https://boroleparth.github.io/test-motorsport-project/accuracy/) | The benchmark against baselines, calibration, and fitted car and driver pace |
 
-Race replay and live odds will be added as their own pages. `f1sim dashboard
---out site` builds the same pages locally (about three minutes; `--quick` skips
-the accuracy benchmark). Each page is a single self-contained HTML file, so it
+Live odds during races will be added as their own page. `f1sim dashboard
+--out site` builds the same pages locally (about six minutes; `--quick` skips
+the accuracy benchmark and the replay data). Each page is a single self-contained HTML file, so it
 also works opened straight from disk. The page templates, shared styles and
 scripts are in `f1sim/web/`.
 
@@ -192,14 +193,14 @@ wear from the race's own completed stints. `simulate_from` runs the remaining
 laps many times, with each car following one of its best remaining plans;
 `plan_options` lists those plans, which the pit advisor will compare.
 
-`f1sim/winprob.py` gives live win odds from five features of the race state
+`f1sim/winprob.py` gives live win odds from six features of the race state
 (gap per lap remaining, running position, share of the race left, current
-pace). Tested on every 5th lap of the 2025 and 2026 races after training on
+pace, and pit-stop time still owed). Tested on every 5th lap of the 2025 and 2026 races after training on
 2023–2024:
 
 | Method | Log loss (lower is better) | Favourite won |
 |---|---|---|
-| Learned model (`winprob`) | 0.79 | 72% |
+| Learned model (`winprob`) | 0.75 | 74% |
 | Simulator from the same states | 0.95 | 68% |
 | "The current leader wins" | 1.98 | 71% |
 
@@ -211,6 +212,19 @@ and the simulator answers what-if questions such as "what if he pits now?".
 One bug found along the way: the pre-race tyre model's sudden "cliff" for old
 tyres gave cars on long stints a phantom speed-up once they pitted, because
 their real lap times showed no cliff. Mid-race, tyres wear steadily instead.
+
+### Race replay and pit advisor
+
+The replay page loads one race at a time (`replay/data/<season>-<round>.json`,
+written by `f1sim/replay.py` when the site is built): the race state after every
+lap, and live win odds from `winprob`. The pit advisor runs in the browser
+(`f1sim/web/replay-engine.js`, a port of `f1sim/live.py`): from the chosen lap it
+reruns the rest of the race 400 times for each option (the driver's best
+remaining plans, and pitting now for each dry compound) and ranks them by
+expected finishing position. `tests/test_replay.py` checks that it agrees with
+the Python simulator. Known limitation: in races where the rules or the tyres
+make it unclear who still has to stop (wet races, very low tyre wear), the odds
+can swing briefly during the pit cycle.
 
 ## How the model works
 
@@ -261,6 +275,7 @@ f1sim/laps.py       lap-by-lap race data from OpenF1 (2023 onward)
 f1sim/tyres.py      pit-stop loss, tyre wear and strategy calibration from lap data
 f1sim/live.py       simulate the rest of a race from any lap's real state
 f1sim/winprob.py    live win probability; weights in f1sim/data/winprob.json
+f1sim/replay.py     per-race data for the replay page
 f1sim/dashboard.py  runs the simulations and builds the website
 f1sim/web/          page templates, shared styles and scripts for the website
 f1sim/data/engine.js the race engine in JavaScript, for the what-if lab

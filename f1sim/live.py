@@ -56,6 +56,7 @@ class RaceState:
     status: str = "GREEN"      # leader's status on this lap
     wet: bool = False
     deg: float | None = None   # tyre-wear multiplier estimated from this race
+    rule_waived: bool = False  # wet-weather tyres used: the two-dry-compound rule no longer applies
 
     @property
     def remaining(self) -> int:
@@ -122,6 +123,7 @@ def race_state(rows: list[dict], lap: int, track: Track, grid: Grid | None = Non
                          "GREEN")
     wet = any(d[lap]["rain"] or d[lap]["compound"] in ("INTERMEDIATE", "WET")
               for d in by_driver.values() if lap in d)
+    waived = any(r["compound"] in ("INTERMEDIATE", "WET") for r in rows if r["lap"] <= lap)
     cars = []
     for code in codes:
         laps = by_driver[code]
@@ -157,7 +159,7 @@ def race_state(rows: list[dict], lap: int, track: Track, grid: Grid | None = Non
         for c in cars:
             c.dnf_rate = rel.get(c.code, DNF_RATE)
     return RaceState(lap=lap, laps_total=laps_total, cars=cars, status=leader_status, wet=wet,
-                     deg=_race_deg(rows, lap, track))
+                     deg=_race_deg(rows, lap, track), rule_waived=waived)
 
 
 # ------------------------------------------------------------- strategy -----
@@ -198,7 +200,7 @@ def plan_options(car: Car, state: RaceState, track: Track, deg: float, top: int 
     cur = lambda k: cum[c0, a0 + k] - cum[c0, a0]                          # k more laps on current set
     fresh = lambda c, k: cum[c, k]                                         # k laps on a new set
     loss = track.pit_loss
-    need = len(car.used | {car.compound}) < 2 and not state.wet           # two-compound rule unmet
+    need = len(car.used | {car.compound}) < 2 and not (state.wet or state.rule_waived)  # two-compound rule unmet
     best: dict[tuple, tuple[float, Plan]] = {}
 
     def add(key, cost, plan):

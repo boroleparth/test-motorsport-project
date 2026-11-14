@@ -68,9 +68,11 @@ def test_win_probabilities(race):
     report = json.loads(resources.files("f1sim").joinpath("data", "winprob.json").read_text())
     assert report["test"]["log_loss"] < 1.0 and report["test"]["favourite_won"] > 0.6
     laps_total = max(r["laps_total"] for r in rows)
-    late = win_probabilities(race_state(rows, laps_total - 2, track))
-    early = win_probabilities(race_state(rows, 5, track))
+    late = win_probabilities(race_state(rows, laps_total - 2, track), track=track)
+    early = win_probabilities(race_state(rows, 5, track), track=track)
+    with pytest.raises(ValueError):
+        win_probabilities(race_state(rows, 5, track))       # the saved weights need the track
     assert sum(late.values()) == pytest.approx(1) and sum(early.values()) == pytest.approx(1)
     assert max(late.values()) > max(early.values())
-    X, codes = features(race_state(rows, 30, track))
-    assert X.shape == (len(codes), 5) and np.isfinite(X).all()
+    X, codes = features(race_state(rows, 30, track), track)
+    assert X.shape == (len(codes), 6) and np.isfinite(X).all() and X[:, 5].min() == 0

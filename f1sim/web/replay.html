@@ -1,0 +1,48 @@
+  <header>
+    <h1>Race <span>replay</span></h1>
+    <p>Pick any Grand Prix since 2023 and step through it lap by lap. The chart shows each driver's chance to win as the race unfolded, and the pit advisor reruns the rest of the race from any lap to compare strategies. Odds can swing briefly during pit stops and weather changes, when it is hardest to tell who still has to stop.</p>
+  </header>
+
+  <section aria-labelledby="h-pick">
+    <h2 id="h-pick" class="sr">Choose a race</h2>
+    <div class="controls">
+      <label for="rp-season">Season<select id="rp-season"></select></label>
+      <label for="rp-race">Race<select id="rp-race"></select></label>
+    </div>
+    <p class="err" id="rp-err" hidden></p>
+  </section>
+
+  <section aria-labelledby="h-chart" id="rp-main" hidden>
+    <div class="panel">
+      <div class="rp-head">
+        <h2 id="h-chart">Chance to win, lap by lap</h2>
+        <p class="note" id="rp-sub"></p>
+      </div>
+      <div class="rp-legend" id="rp-legend"></div>
+      <svg id="rp-chart" viewBox="0 0 760 300" role="img" aria-label="Win probability by lap"></svg>
+      <div class="rp-lapbar">
+        <button class="btn" id="rp-play" aria-label="Play">▶ Play</button>
+        <input id="rp-lap" type="range" min="1" max="2" value="1" aria-label="Lap">
+        <span class="rp-lapval" id="rp-lapval"></span>
+        <span class="chip rp-status" id="rp-status" hidden></span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3 id="rp-order-h">Running order</h3>
+        <div class="scroll"><table class="data rp-order" id="rp-order"></table></div>
+        <p class="note">Tyre: <span class="tyre t0">S</span> soft, <span class="tyre t1">M</span> medium, <span class="tyre t2">H</span> hard, <span class="tyre t3">I</span> intermediate, <span class="tyre t4">W</span> wet, with laps on the set. Select a driver to open them in the pit advisor.</p>
+      </div>
+      <div class="panel" aria-live="polite">
+        <h3>Pit advisor</h3>
+        <div class="row2 rp-adv-ctl">
+          <select id="rp-driver" aria-label="Driver"></select>
+          <button class="btn primary" id="rp-advise">Compare options</button>
+        </div>
+        <p class="note" id="rp-adv-note"></p>
+        <div class="scroll"><table class="data" id="rp-adv"></table></div>
+        <p class="note" id="rp-actual"></p>
+      </div>
+    </div>
+  </section>

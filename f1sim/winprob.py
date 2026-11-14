@@ -1,6 +1,6 @@
 """Live win probability from the state of a race.
 
-A conditional logit: each running car gets a score from five features of the
+A conditional logit: each running car gets a score from six features of the
 race state, and the win probabilities are the softmax of the scores across the
 field. Features (``features``):
 
@@ -9,6 +9,7 @@ field. Features (``features``):
 3. log of running position x share of the race remaining
 4. gap per lap remaining x share of the race remaining
 5. current pace relative to the field median, s/lap (from ``f1sim.live``)
+6. pit-stop time still owed compared with the car owing least, per lap remaining
 
 Tested on every 5th lap of the 2025 and 2026 races after training on 2023-2024
 (``train_and_save`` writes the result to data/winprob.json): log loss 0.79 and
@@ -27,20 +28,31 @@ from pathlib import Path
 
 import numpy as np
 
-from .live import RaceState, race_state
+from .live import RaceState, plan_options, race_state
 from .models import Grid, Track
 
 WEIGHTS = Path(__file__).resolve().parent / "data" / "winprob.json"
 
 
-def features(state: RaceState) -> tuple[np.ndarray, list[str]]:
-    """Feature matrix for the running cars, in running order."""
+def features(state: RaceState, track: Track | None = None) -> tuple[np.ndarray, list[str]]:
+    """Feature matrix for the running cars, in running order.
+
+    With ``track``, adds a sixth feature: the time each car still owes in pit
+    stops compared with the car owing least (stops left in its best remaining
+    plan x the circuit's pit loss), per lap remaining. Without it, a car that has
+    not pitted yet looks like a leader during the pit cycle.
+    """
     run = sorted([c for c in state.cars if c.running], key=lambda c: c.gap)
     rem, frac = state.remaining, state.remaining / state.laps_total
     med = float(np.median([c.pace for c in run])) if run else 0.0
-    X = np.array([[c.gap / (rem + 1), np.log(p), np.log(p) * frac, c.gap / (rem + 1) * frac, c.pace - med]
-                  for p, c in enumerate(run, 1)])
-    return X, [c.code for c in run]
+    rows = [[c.gap / (rem + 1), np.log(p), np.log(p) * frac, c.gap / (rem + 1) * frac, c.pace - med]
+            for p, c in enumerate(run, 1)]
+    if track is not None and run:
+        deg = state.deg or track.deg
+        owed = np.array([len(plan_options(c, state, track, deg, top=1)[0][0].pits) for c in run], float)
+        owed = (owed - owed.min()) * track.pit_loss / (rem + 1)
+        rows = [r + [o] for r, o in zip(rows, owed)]
+    return np.array(rows), [c.code for c in run]
 
 
 def _softmax(s: np.ndarray) -> np.ndarray:
@@ -94,7 +106,7 @@ def samples_from(races: dict[tuple, list[dict]], tracks: dict[str, Track], grids
             continue
         laps_total = max(r["laps_total"] for r in rows)
         for lap in range(every, laps_total, every):
-            X, codes = features(race_state(rows, lap, track, (grids or {}).get(key)))
+            X, codes = features(race_state(rows, lap, track, (grids or {}).get(key)), track)
             if winner in codes:
                 out.append((X, codes.index(winner)))
     return out
@@ -145,12 +157,15 @@ def load_weights() -> np.ndarray:
     return np.array(json.loads(resources.files("f1sim").joinpath("data", "winprob.json").read_text())["weights"])
 
 
-def win_probabilities(state: RaceState, w: np.ndarray | None = None) -> dict[str, float]:
-    """Each running car's chance to win from ``state``."""
-    X, codes = features(state)
+def win_probabilities(state: RaceState, w: np.ndarray | None = None, track: Track | None = None) -> dict[str, float]:
+    """Each running car's chance to win from ``state`` (pass ``track`` when the weights use pit stops owed)."""
+    w = load_weights() if w is None else w
+    if len(w) == 6 and track is None:
+        raise ValueError("these weights use pit stops owed: pass the race's track")
+    X, codes = features(state, track if len(w) == 6 else None)
     if not codes:
         return {}
-    p = _softmax(X @ (load_weights() if w is None else w))
+    p = _softmax(X @ w)
     return dict(zip(codes, p.tolist()))
 
 

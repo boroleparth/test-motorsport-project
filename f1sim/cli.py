@@ -146,7 +146,8 @@ def cmd_benchmark(args, grid, tracks):
 def cmd_dashboard(args, grid, tracks):
     history = [load_season(y) for y in bundled_seasons()] if not args.season_file else None
     pages = build_dashboard(grid, tracks, args.out, load_season(args.season_file), args.sims,
-                            0 if args.seed is None else args.seed, history=history, accuracy=not args.quick)
+                            0 if args.seed is None else args.seed, history=history, accuracy=not args.quick,
+                            replays=not args.quick)
     print(f"Wrote {len(pages)} pages to {args.out}/. Open {Path(args.out) / 'index.html'} in a browser.")
 
 
@@ -227,7 +228,7 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("dashboard", parents=[common()], help="build the website (home, forecast, lab, accuracy pages)")
     p.add_argument("--out", default="site", help="folder to write the pages to")
-    p.add_argument("--quick", action="store_true", help="skip the multi-season accuracy section (much faster)")
+    p.add_argument("--quick", action="store_true", help="skip the accuracy benchmark and the replay data (much faster)")
     p.add_argument("--season-file", help="season file from `f1sim fetch` (default: bundled 2026)")
     p.set_defaults(func=cmd_dashboard)
 

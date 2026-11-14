@@ -57,13 +57,11 @@ def main() -> None:
                 "consistency, wet and pit-stop values are assumptions, not measurements.")
         (DATA / "grid.json").write_text(json.dumps(grid_to_json(fit_grid(season, load_grid()), note), indent=1))
 
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
     history = [load_season(y) for y in bundled_seasons()]
-    html = build_dashboard(load_grid(), load_tracks(), load_season(), n_sims=args.sims, seed=0, history=history)
-    (out / "index.html").write_text(html)
-    (out / ".nojekyll").write_text("")
-    print(f"Wrote {out / 'index.html'} ({len(html) // 1024} KB)")
+    pages = build_dashboard(load_grid(), load_tracks(), args.out, load_season(), n_sims=args.sims, seed=0,
+                            history=history)
+    for page in pages:
+        print(f"Wrote {page} ({page.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":

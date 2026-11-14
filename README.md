@@ -47,7 +47,7 @@ pip install -e ".[dev]"
 ## Use
 
 ```bash
-f1sim dashboard --out dashboard.html           # everything below as one HTML page
+f1sim dashboard --out site                     # build the website into site/
 f1sim tracks                                   # circuits and their fastest strategy
 f1sim race monaco --seed 1                     # win / podium / points probabilities
 f1sim race britain --wet                       # force a wet race (--dry to force dry)
@@ -84,21 +84,24 @@ season = simulate_season(grid, tracks.values(), n_sims=1000, seed=42)
 season.drivers()[:3]          # title probability, expected points, 5–95% range
 ```
 
-## Dashboard
+## Website
 
-`f1sim dashboard` runs every simulation and writes one self-contained HTML file
-you can open in a browser: race odds and finishing-position heatmap for any
-circuit, championship projection from the real standings, a pit-strategy
-comparison for each driver at the next race, the walk-forward accuracy record,
-and the fitted car and driver pace. It takes about three minutes at the
-default 2,000 simulations per circuit; `--quick` skips the multi-season
-accuracy section.
+**https://boroleparth.github.io/test-motorsport-project/** is built from this
+repository on every push to `main` and every Monday. It has one page per area,
+joined by a shared menu:
 
-The live site is rebuilt by `.github/workflows/pages.yml` on every push to
-`main` and every Monday morning: it downloads the current season's results,
-refits the ratings and republishes (`scripts/build_site.py`). The updated data
-is not committed back, so run the script locally and commit when you want the
-bundled data refreshed.
+| Page | What it shows |
+|---|---|
+| [Home](https://boroleparth.github.io/test-motorsport-project/) | The next race at a glance and links to everything |
+| [Forecast](https://boroleparth.github.io/test-motorsport-project/forecast/) | Win, podium and points odds for any circuit, the championship projection, pit strategies compared |
+| [What-if lab](https://boroleparth.github.io/test-motorsport-project/lab/) | Rerun a race in your browser with rain, pace, strategy or grid changes |
+| [Accuracy](https://boroleparth.github.io/test-motorsport-project/accuracy/) | The benchmark against baselines, calibration, and fitted car and driver pace |
+
+Race replay and live odds will be added as their own pages. `f1sim dashboard
+--out site` builds the same pages locally (about three minutes; `--quick` skips
+the accuracy benchmark). Each page is a single self-contained HTML file, so it
+also works opened straight from disk. The page templates, shared styles and
+scripts are in `f1sim/web/`.
 
 ### What-if lab
 
@@ -258,7 +261,8 @@ f1sim/laps.py       lap-by-lap race data from OpenF1 (2023 onward)
 f1sim/tyres.py      pit-stop loss, tyre wear and strategy calibration from lap data
 f1sim/live.py       simulate the rest of a race from any lap's real state
 f1sim/winprob.py    live win probability; weights in f1sim/data/winprob.json
-f1sim/dashboard.py  builds the HTML dashboard (template in f1sim/data/dashboard.html)
+f1sim/dashboard.py  runs the simulations and builds the website
+f1sim/web/          page templates, shared styles and scripts for the website
 f1sim/data/engine.js the race engine in JavaScript, for the what-if lab
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters

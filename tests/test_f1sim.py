@@ -194,7 +194,7 @@ def test_fitted_ratings_beat_uninformed(grid, tracks):
 
 
 def test_dashboard(grid, tracks, tmp_path, capsys):
-    from f1sim.dashboard import build_data, render
+    from f1sim.dashboard import build_data, build_site
     data = build_data(grid, tracks, load_season(), n_sims=200, seed=1, accuracy=False)
     assert data["next"] in tracks and len(data["tracks"]) == len(tracks)
     for t in data["tracks"]:
@@ -206,12 +206,16 @@ def test_dashboard(grid, tracks, tmp_path, capsys):
                       history=[load_season()])
     assert len(full["accuracy"]["methods"]) == 4 and full["accuracy"]["races"]
     json.dumps(full)                                   # everything is plain JSON
-    page = render(data)
-    assert page.startswith("<!doctype html>") and "__DATA__" not in page
-    assert not render(data, standalone=False).startswith("<!doctype")
-    out = tmp_path / "d.html"
-    main(["dashboard", "--sims", "200", "--quick", "--out", str(out)])
-    assert "F1 Race" in out.read_text() and capsys.readouterr().out
+    pages = build_site(data, tmp_path / "site")
+    names = {p.relative_to(tmp_path / "site").as_posix() for p in pages}
+    assert names == {"index.html", "forecast/index.html", "lab/index.html", "accuracy/index.html"}
+    for p in pages:
+        html = p.read_text()
+        assert html.startswith("<!doctype html>") and 'aria-current="page"' in html and "Code on GitHub" in html
+    assert "F1Sim" in (tmp_path / "site/lab/index.html").read_text()            # engine only on the lab page
+    assert "F1Sim" not in (tmp_path / "site/forecast/index.html").read_text()
+    main(["dashboard", "--sims", "200", "--quick", "--out", str(tmp_path / "cli")])
+    assert (tmp_path / "cli/index.html").exists() and capsys.readouterr().out
 
 
 def test_start_grid_and_qualifying_update(grid, tracks):

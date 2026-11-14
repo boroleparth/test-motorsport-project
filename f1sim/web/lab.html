@@ -1,0 +1,62 @@
+  <section aria-labelledby="h-lab" id="lab" class="first">
+    <div class="head"><h1 id="h-lab">What-if <span>lab</span></h1>
+      <p>Change the conditions of a race and rerun it in your browser. Each run simulates the race twice with the same random draws, once as forecast and once with your changes, so every difference comes from what you changed.</p></div>
+    <div class="lab">
+      <div class="panel">
+        <div class="field">
+          <div class="row2">
+            <label for="lab-race">Race<select id="lab-race"></select></label>
+            <label for="lab-sims">Simulations<select id="lab-sims"><option value="500">500 (fast)</option><option value="1000" selected>1,000</option><option value="3000">3,000 (precise)</option></select></label>
+          </div>
+        </div>
+        <div class="field">
+          <h3>Weather</h3>
+          <div class="seg" role="group" aria-label="Weather">
+            <button id="w-auto" aria-pressed="false">Usual odds</button><button id="w-dry" aria-pressed="false">Dry</button><button id="w-wet" aria-pressed="true">Wet</button>
+          </div>
+        </div>
+        <div class="field">
+          <h3>Car pace</h3>
+          <div class="row2">
+            <select id="lab-team" aria-label="Team"></select>
+            <input id="lab-pace" type="range" min="-1" max="1" step="0.05" value="0" aria-label="Pace change, seconds per lap">
+            <span class="paceval" id="lab-paceval">±0.00 s</span>
+          </div>
+          <span class="hint">Seconds per lap. Left is faster: −0.30 is roughly a major upgrade.</span>
+        </div>
+        <div class="field">
+          <h3>Pit strategy</h3>
+          <div class="row2">
+            <select id="lab-sdrv" aria-label="Driver"></select>
+            <select id="lab-strat" aria-label="Strategy"></select>
+          </div>
+          <div class="row2" id="lab-customrow" hidden>
+            <input id="lab-custom" type="text" placeholder="M-H@24" aria-label="Custom strategy" autocomplete="off" spellcheck="false">
+            <button class="btn" id="lab-customadd" style="flex:0 0 auto">Use</button>
+          </div>
+          <span class="hint">Tyres S, M, H joined by dashes, then @ and the laps to pit on: S-M-H@15,36 is soft, medium, hard with stops after laps 15 and 36.</span>
+          <span class="err" id="lab-err" hidden></span>
+        </div>
+        <div class="field">
+          <h3>Starting position</h3>
+          <div class="row2">
+            <select id="lab-gdrv" aria-label="Driver"></select>
+            <select id="lab-gpos" aria-label="Grid position"></select>
+          </div>
+        </div>
+        <div class="field">
+          <h3>Your changes</h3>
+          <div class="chips" id="lab-chips"></div>
+          <div class="actions">
+            <button class="btn primary" id="lab-run">Run simulation</button>
+            <button class="btn" id="lab-reset">Clear changes</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" aria-live="polite">
+        <p class="headline" id="lab-headline"></p>
+        <p class="note" id="lab-status"></p>
+        <div class="scroll"><table class="data" id="lab-table"></table></div>
+      </div>
+    </div>
+  </section>

@@ -1,8 +1,9 @@
-"""Build a self-contained HTML dashboard from simulation results."""
+"""Build the website: a home page plus one page per area (forecast, lab, accuracy)."""
 from __future__ import annotations
 
 import datetime as dt
 import json
+from pathlib import Path
 from importlib import resources
 
 import numpy as np
@@ -110,24 +111,115 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
     return data
 
 
-def render(data: dict, standalone: bool = True) -> str:
-    """Fill the HTML template. ``standalone=False`` returns a fragment without <html>/<body>."""
-    files = resources.files("f1sim").joinpath("data")
-    engine = files.joinpath("engine.js").read_text()
-    page = (files.joinpath("dashboard.html").read_text()
-            .replace("/*__ENGINE__*/", engine)
-            .replace("__DATA__", json.dumps(data, separators=(",", ":")).replace("</", "<\\/")))
-    if not standalone:
-        return page
-    return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-            '<meta name="viewport" content="width=device-width, initial-scale=1">\n</head>\n<body>\n'
-            + page + "\n</body>\n</html>\n")
+PAGES = [  # (folder, menu label, title, description)
+    ("", "Home", "F1 Race Simulator",
+     "Formula 1 race and championship predictions from a lap-by-lap simulator fitted to real results."),
+    ("forecast", "Forecast", "Race Forecast", "Win, podium and points odds for every circuit, the championship and pit strategies."),
+    ("lab", "What-if lab", "What-if Lab", "Rerun an F1 race in your browser with rain, pace, strategy or grid changes."),
+    ("accuracy", "Accuracy", "Prediction Accuracy", "How the simulator's predictions compare with real results and simple baselines."),
+]
+REPO = "https://github.com/boroleparth/test-motorsport-project"
+FONTS = ("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700"
+         "&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap")
 
 
-def build_dashboard(grid: Grid, tracks: dict[str, Track], season: dict | None = None, n_sims: int = 2000,
-                    seed: int | None = 0, standalone: bool = True, accuracy: bool = True,
-                    history: list[dict] | None = None) -> str:
-    return render(build_data(grid, tracks, season, n_sims, seed, accuracy, history), standalone)
+def _page_data(data: dict, page: str) -> dict:
+    """Only the data each page needs, so every page stays small."""
+    pick = lambda *keys: {k: data[k] for k in keys}
+    if page == "forecast":
+        return pick("label", "rounds_done", "rounds_total", "sims", "next", "drivers", "tracks", "season", "strategy")
+    if page == "lab":
+        return {**pick("next", "drivers", "model"),
+                "tracks": [{k: t[k] for k in ("key", "name", "remaining")} for t in data["tracks"]]}
+    if page == "accuracy":
+        return pick("label", "drivers", "teams", "accuracy")
+    # home: a summary of the other pages
+    home = pick("label", "rounds_done", "rounds_total")
+    track = next((t for t in data["tracks"] if t["key"] == data["next"]), None)
+    if track:
+        top = sorted(track["rows"], key=lambda r: -r["win"])[:3]
+        home["next"] = {"name": track["name"], "top": [{"code": data["drivers"][r["d"]]["code"],
+                        "name": data["drivers"][r["d"]]["name"], "win": r["win"]} for r in top]}
+    if data.get("season"):
+        lead = data["season"]["drivers"][0]
+        home["title"] = {"code": lead["name"], "p": lead["title"]}
+    acc = data.get("accuracy")
+    if acc:
+        test = next((t for t in acc.get("tests", []) if t["a"] == "Simulator, after qualifying"), None)
+        if test:
+            home["acc"] = {"diff": test["diff"], "lo": test["lo"], "hi": test["hi"], "races": acc["n_all"],
+                           "first": acc["all_seasons"][0]}
+    return {"home": home}
+
+
+def render_page(data: dict, page: str) -> str:
+    """One self-contained HTML page of the site (styles and scripts inlined)."""
+    web = resources.files("f1sim").joinpath("web")
+    name = page or "home"
+    root = "../" if page else "./"
+    _, _, title, description = next(p for p in PAGES if p[0] == page)
+    items = []
+    for folder, label, _, _ in PAGES:
+        current = ' aria-current="page"' if folder == page else ""
+        items.append(f'<li><a href="{root}{folder + "/" if folder else ""}"{current}>{label}</a></li>')
+    items.append(f'<li class="ext"><a href="{REPO}">Code on GitHub ↗</a></li>')
+    engine = ""
+    if page == "lab":
+        engine = "<script>\n" + resources.files("f1sim").joinpath("data", "engine.js").read_text() + "\n</script>\n"
+    blob = json.dumps(_page_data(data, page), separators=(",", ":")).replace("</", "<\\/")
+    full_title = title if not page else f"{title} · F1 Race Simulator"
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{full_title}</title>
+<meta name="description" content="{description}">
+<link rel="stylesheet" href="{FONTS}">
+<style>
+{web.joinpath("style.css").read_text()}
+</style>
+</head>
+<body>
+<nav class="topbar" aria-label="Site"><div class="in">
+<a class="brand" href="{root}">F1 Race <span>Sim</span></a>
+<ul class="menu">{"".join(items)}</ul>
+</div></nav>
+<div class="wrap">
+{web.joinpath(name + ".html").read_text()}
+<footer>Generated {data["generated"]} by f1sim from real results (<a href="https://api.jolpi.ca/ergast/f1/">Jolpica F1 API</a>,
+<a href="https://openf1.org">OpenF1</a>). Predictions come from a lap-by-lap simulation; see the
+<a href="{REPO}">code and methods on GitHub</a>.</footer>
+</div>
+<div id="tip" hidden></div>
+{engine}<script>
+const D = {blob};
+{web.joinpath("common.js").read_text()}
+{web.joinpath(name + ".js").read_text()}
+</script>
+</body>
+</html>
+"""
+
+
+def build_site(data: dict, out: str | Path) -> list[Path]:
+    """Write every page to ``out`` (index.html plus one folder per page)."""
+    out = Path(out)
+    written = []
+    for folder, *_ in PAGES:
+        path = out / folder / "index.html" if folder else out / "index.html"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(render_page(data, folder))
+        written.append(path)
+    (out / ".nojekyll").write_text("")
+    return written
+
+
+def build_dashboard(grid: Grid, tracks: dict[str, Track], out: str | Path, season: dict | None = None,
+                    n_sims: int = 2000, seed: int | None = 0, accuracy: bool = True,
+                    history: list[dict] | None = None) -> list[Path]:
+    """Run every simulation and write the multi-page site to ``out``."""
+    return build_site(build_data(grid, tracks, season, n_sims, seed, accuracy, history), out)
 
 
 def export_model(grid: Grid, tracks: dict[str, Track]) -> dict:

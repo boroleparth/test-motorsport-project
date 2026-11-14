@@ -1,0 +1,61 @@
+  <header>
+    <h1>Race <span>forecast</span></h1>
+    <p id="sub"></p>
+  </header>
+
+  <section aria-labelledby="h-race">
+    <div class="controls">
+      <label for="race">Race
+        <select id="race"></select>
+      </label>
+      <div class="head"><h2 id="h-race">Odds for one race</h2></div>
+    </div>
+    <div class="facts" id="facts"></div>
+    <div class="cols">
+      <div class="panel">
+        <h3>Chance to win</h3>
+        <div class="bars" id="winbars"></div>
+        <p class="note">Top ten by win probability. Hover a bar for podium, pole and retirement odds.</p>
+      </div>
+      <div class="panel">
+        <h3>Where each driver finishes</h3>
+        <div class="scroll"><table class="heat" id="heat"></table></div>
+        <div class="ramp" id="ramp"></div>
+      </div>
+    </div>
+    <details class="panel">
+      <summary>All numbers for this race</summary>
+      <div class="scroll"><table class="data" id="racetable"></table></div>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-champ" id="champ">
+    <div class="controls">
+      <div class="head"><h2 id="h-champ">Championship projection</h2><p id="champsub"></p></div>
+      <div class="seg" role="group" aria-label="Championship">
+        <button id="seg-d" aria-pressed="true">Drivers</button><button id="seg-c" aria-pressed="false">Constructors</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 id="champlead"></h3>
+      <div class="bars" id="champbars"></div>
+      <div class="key">
+        <span><i class="k-tick"></i>Points today</span>
+        <span><i class="k-dot"></i>Expected final points</span>
+        <span><i class="k-range"></i>5%–95% of simulated seasons</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-strat" id="strat">
+    <div class="controls">
+      <div class="head"><h2 id="h-strat">Strategy comparison</h2><p id="stratsub"></p></div>
+      <label for="sdriver">Driver
+        <select id="sdriver"></select>
+      </label>
+    </div>
+    <div class="panel">
+      <div class="scroll"><table class="data" id="strattable"></table></div>
+      <p class="note">Each strategy is raced against the same simulated field in dry conditions, so differences come from the strategy. “Clean-air cost” is tyre and pit time with no traffic; a faster clean-air plan can still lose places in traffic.</p>
+    </div>
+  </section>

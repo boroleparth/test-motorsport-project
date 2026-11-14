@@ -1,0 +1,40 @@
+  <header>
+    <h1>How <span>accurate</span> is it</h1>
+    <p>Every prediction here was made using only information available before the race (or before that lap), then compared with what actually happened. Settings are chosen on older seasons and tested on newer ones.</p>
+  </header>
+
+  <section aria-labelledby="h-acc" id="acc">
+    <div class="head"><h2 id="h-acc">Race predictions</h2><p id="accsub"></p></div>
+    <div class="panel">
+      <h3>Simulator against simple baselines</h3>
+      <div class="scroll"><table class="data" id="acctable"></table></div>
+      <p class="note" id="accnote"></p>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <div class="controls">
+          <h3>When it says 30%, does it happen 30% of the time</h3>
+          <div class="seg" role="group" aria-label="Outcome">
+            <button id="cal-win" aria-pressed="false">Win</button><button id="cal-podium" aria-pressed="true">Podium</button><button id="cal-top10" aria-pressed="false">Top 10</button>
+          </div>
+        </div>
+        <svg id="calchart" viewBox="0 0 360 300" role="img" aria-label="Calibration chart"></svg>
+        <p class="note" id="calnote"></p>
+      </div>
+      <div class="panel">
+        <h3>Chance given to each real winner this season</h3>
+        <div class="colchart" id="acccols"></div>
+        <div class="collabels" id="acclabels"></div>
+        <p class="note">Before qualifying. Darker columns are races where the simulator's favourite won. The dashed line is a blind guess among the grid.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-pace">
+    <div class="head"><h2 id="h-pace">What the model knows</h2><p>Car and driver pace in seconds per lap behind the fastest, measured from qualifying laps and race gaps in the real results. Recent races count more.</p></div>
+    <div class="cols">
+      <div class="panel"><h3>Cars</h3><div class="bars" id="teambars"></div></div>
+      <div class="panel"><h3>Drivers</h3><div class="scroll"><table class="data" id="drivertable"></table></div>
+        <p class="note">Driver gaps are relative to the quicker driver in the same team.</p></div>
+    </div>
+  </section>

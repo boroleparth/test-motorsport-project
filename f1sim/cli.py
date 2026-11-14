@@ -145,10 +145,9 @@ def cmd_benchmark(args, grid, tracks):
 
 def cmd_dashboard(args, grid, tracks):
     history = [load_season(y) for y in bundled_seasons()] if not args.season_file else None
-    html = build_dashboard(grid, tracks, load_season(args.season_file), args.sims, 0 if args.seed is None else args.seed,
-                           history=history, accuracy=not args.quick)
-    Path(args.out).write_text(html)
-    print(f"Wrote {args.out} ({len(html) // 1024} KB). Open it in a browser.")
+    pages = build_dashboard(grid, tracks, args.out, load_season(args.season_file), args.sims,
+                            0 if args.seed is None else args.seed, history=history, accuracy=not args.quick)
+    print(f"Wrote {len(pages)} pages to {args.out}/. Open {Path(args.out) / 'index.html'} in a browser.")
 
 
 def cmd_fetch(args, grid, tracks):
@@ -226,8 +225,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--start-round", type=int, default=5, help="first rounds of each season are used only for fitting")
     p.set_defaults(func=cmd_benchmark)
 
-    p = sub.add_parser("dashboard", parents=[common()], help="write an HTML dashboard of all predictions")
-    p.add_argument("--out", default="dashboard.html")
+    p = sub.add_parser("dashboard", parents=[common()], help="build the website (home, forecast, lab, accuracy pages)")
+    p.add_argument("--out", default="site", help="folder to write the pages to")
     p.add_argument("--quick", action="store_true", help="skip the multi-season accuracy section (much faster)")
     p.add_argument("--season-file", help="season file from `f1sim fetch` (default: bundled 2026)")
     p.set_defaults(func=cmd_dashboard)

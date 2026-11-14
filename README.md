@@ -96,9 +96,10 @@ joined by a shared menu:
 | [Forecast](https://boroleparth.github.io/test-motorsport-project/forecast/) | Win, podium and points odds for any circuit, the championship projection, pit strategies compared |
 | [What-if lab](https://boroleparth.github.io/test-motorsport-project/lab/) | Rerun a race in your browser with rain, pace, strategy or grid changes |
 | [Race replay](https://boroleparth.github.io/test-motorsport-project/replay/) | Step through any Grand Prix since 2023 with lap-by-lap win odds and a pit advisor |
+| [Live](https://boroleparth.github.io/test-motorsport-project/live/) | Win odds and pit advice during a race; between races, the last race replayed as if live |
 | [Accuracy](https://boroleparth.github.io/test-motorsport-project/accuracy/) | The benchmark against baselines, calibration, and fitted car and driver pace |
 
-Live odds during races will be added as their own page. `f1sim dashboard
+`f1sim dashboard
 --out site` builds the same pages locally (about six minutes; `--quick` skips
 the accuracy benchmark and the replay data). Each page is a single self-contained HTML file, so it
 also works opened straight from disk. The page templates, shared styles and
@@ -226,6 +227,24 @@ the Python simulator. Known limitation: in races where the rules or the tyres
 make it unclear who still has to stop (wet races, very low tyre wear), the odds
 can swing briefly during the pit cycle.
 
+### Live page
+
+During a Grand Prix the live page polls OpenF1 every 20 seconds from the
+visitor's browser (OpenF1 allows cross-origin requests) and runs the whole
+pipeline there: `f1sim/web/live-feed.js` ports the lap table
+(`laps.build_rows`), the race state (`live.race_state`) and the win model
+(`winprob`), and the replay page's chart and pit advisor display the result.
+`tests/test_live_page.py` checks the port against Python on saved OpenF1 data,
+including a feed cut off mid-race. Live data differs from history in one way
+that needed handling: when the leader completes a lap the rest of the field is
+still on it, so the page shows the last lap the whole lead-lap field has
+completed.
+
+Whether OpenF1 shares data during a session for free could not be tested before
+a race weekend; if it does not, the page says so and shows the race once the
+data is published. Between races, "watch the last race as if live" feeds the
+latest race through the same pipeline in time order.
+
 ## How the model works
 
 Each simulation runs qualifying, then the race lap by lap for every car:
@@ -276,8 +295,9 @@ f1sim/tyres.py      pit-stop loss, tyre wear and strategy calibration from lap d
 f1sim/live.py       simulate the rest of a race from any lap's real state
 f1sim/winprob.py    live win probability; weights in f1sim/data/winprob.json
 f1sim/replay.py     per-race data for the replay page
+f1sim/web/          page templates, styles and scripts; replay-engine.js and live-feed.js run the
+                    pit advisor and the live pipeline in the browser
 f1sim/dashboard.py  runs the simulations and builds the website
-f1sim/web/          page templates, shared styles and scripts for the website
 f1sim/data/engine.js the race engine in JavaScript, for the what-if lab
 f1sim/cli.py        command-line interface
 f1sim/data/         fitted 2026 grid, 2014–2026 results, circuit parameters

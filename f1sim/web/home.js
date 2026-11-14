@@ -12,7 +12,7 @@ function initHome() {
         : `Once qualifying is known, its odds ${H.acc.hi < 0 ? "beat" : "match"} "everyone finishes where they start" over ${H.acc.races} races since ${H.acc.first}, each predicted before it was run${H.acc.hi < 0 ? ", by a margin outside the error bars" : ""}.`,
       "Check the record"],
     ["replay/", "Race replay", "Every race since 2023", "Step through any Grand Prix lap by lap with live win odds, and ask the pit advisor what each driver should have done.", "Replay a race"],
-    [null, "Live", "Coming soon", "Win odds that update during a race.", "Planned"],
+    ["live/", "Live", "During each race", "Win odds and pit advice that update as laps complete, straight from the timing feed. Between races, watch the last one replayed as if live.", "Go live"],
   ];
   $("cards").innerHTML = cards.map(([href, t, big, text, go]) => href
     ? `<a class="card" href="${href}"><h3>${esc(t)}</h3><span class="big">${esc(big)}</span><p>${esc(text)}</p><span class="go">${esc(go)} →</span></a>`

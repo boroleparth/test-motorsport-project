@@ -208,7 +208,8 @@ def test_dashboard(grid, tracks, tmp_path, capsys):
     json.dumps(full)                                   # everything is plain JSON
     pages = build_site(data, tmp_path / "site", replays=False)
     names = {p.relative_to(tmp_path / "site").as_posix() for p in pages}
-    assert names == {"index.html", "forecast/index.html", "lab/index.html", "replay/index.html", "accuracy/index.html"}
+    assert names == {"index.html", "forecast/index.html", "lab/index.html", "replay/index.html", "live/index.html",
+                     "accuracy/index.html"}
     for p in pages:
         html = p.read_text()
         assert html.startswith("<!doctype html>") and 'aria-current="page"' in html and "Code on GitHub" in html

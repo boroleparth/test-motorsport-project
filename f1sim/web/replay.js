@@ -14,6 +14,10 @@ function rpInit() {
   rpRaces(start.file);
   $("rp-season").addEventListener("change", () => rpRaces());
   $("rp-race").addEventListener("change", () => rpLoad($("rp-race").value));
+}
+
+// Controls shared by the replay and live pages: slider, play, chart clicks, keys, pit advisor.
+function rpBind() {
   $("rp-lap").addEventListener("input", () => { rpStop(); rpSetLap(+$("rp-lap").value); });
   $("rp-play").addEventListener("click", () => RP.timer ? rpStop() : rpPlay());
   $("rp-advise").addEventListener("click", rpAdvise);
@@ -25,7 +29,7 @@ function rpInit() {
   });
   document.addEventListener("keydown", e => {
     if (!RP.race || e.target.closest("input, select, textarea")) return;
-    if (e.key === "ArrowRight") { rpStop(); rpSetLap(Math.min(RP.lap + 1, RP.race.track.laps)); }
+    if (e.key === "ArrowRight") { rpStop(); rpSetLap(Math.min(RP.lap + 1, RP.race.laps[RP.race.laps.length - 1].lap)); }
     if (e.key === "ArrowLeft") { rpStop(); rpSetLap(Math.max(RP.lap - 1, 1)); }
   });
 }
@@ -52,26 +56,35 @@ async function rpLoad(file) {
       : "Could not load this race's data. Try reloading the page.";
     $("rp-err").hidden = false; $("rp-main").hidden = true; return;
   }
-  RP.race = RP.cache[file];
   try { localStorage.setItem("f1sim-replay", file); } catch (e) {}
+  rpShow(RP.cache[file]);
+  rpSetLap(Math.min(Math.round(RP.race.track.laps * 0.4), RP.race.track.laps));
+}
+
+// Show a race (from a replay file, or built live). Draws the chart; call rpSetLap after.
+function rpShow(race) {
+  RP.race = race;
   const r = RP.race, L = r.track.laps;
   // drivers worth drawing: the five with the highest win chance at any point
   const peak = {};
   r.laps.forEach(l => Object.entries(l.win).forEach(([c, p]) => { peak[c] = Math.max(peak[c] || 0, p); }));
+  // live races: rank by the latest odds so the current contenders are drawn
+  if (r.live && r.laps.length) { const now = r.laps[r.laps.length - 1].win; Object.keys(peak).forEach(c => { peak[c] = (now[c] || 0) + peak[c] * 1e-3; }); }
   RP.top = Object.keys(peak).sort((a, b) => peak[b] - peak[a]).slice(0, 5);
-  $("rp-lap").max = L;
+  $("rp-lap").max = r.laps[r.laps.length - 1].lap;
   const neutral = r.laps.filter(l => l.status !== "GREEN").length;
   $("rp-sub").textContent = `${r.name}, ${L} laps${r.winner ? `, won by ${r.winner}` : ""}. ` +
-    `${neutral ? `${neutral} laps under safety car, virtual safety car or red flag (shaded). ` : ""}Odds from the live model after each lap; click the chart or use the arrow keys to move.`;
+    `${neutral ? `${neutral} laps under safety car, virtual safety car or red flag (shaded). ` : ""}Odds from the live model after each lap` +
+    (r.live ? "." : "; click the chart or use the arrow keys to move.");
   $("rp-main").hidden = false;
   rpChart();
-  rpSetLap(Math.min(Math.round(L * 0.4), L));
 }
 
 const tyre = (c, age) => `<span class="tyre t${c}">${"SMHIW"[c]}</span><span class="age">${age}</span>`;
 
 function rpSetLap(lap) {
-  const r = RP.race, L = r.track.laps, e = r.laps[lap - 1];
+  const r = RP.race, L = r.track.laps, e = r.laps.find(x => x.lap === lap) || r.laps[r.laps.length - 1];
+  lap = e.lap;
   RP.lap = lap;
   $("rp-lap").value = lap;
   $("rp-lapval").textContent = `Lap ${lap} / ${L}`;
@@ -112,7 +125,7 @@ function adviseHint() {
 // what the driver actually did after this lap
 function rpActual() {
   const r = RP.race, code = $("rp-driver").value;
-  if (!code) { $("rp-actual").textContent = ""; return; }
+  if (!code || r.live) { $("rp-actual").textContent = ""; return; }
   const stops = [];
   let prev = null;
   for (const e of r.laps.slice(RP.lap - 1)) {
@@ -127,7 +140,7 @@ function rpActual() {
 }
 
 function rpAdvise() {
-  const r = RP.race, e = r.laps[RP.lap - 1], code = $("rp-driver").value, btn = $("rp-advise");
+  const r = RP.race, e = r.laps.find(x => x.lap === RP.lap), code = $("rp-driver").value, btn = $("rp-advise");
   if (r.track.laps - RP.lap <= 1) return;
   btn.disabled = true; btn.textContent = "Simulating…";
   setTimeout(() => {
@@ -143,7 +156,7 @@ function rpAdvise() {
 }
 
 function rpPlay() {
-  const L = RP.race.track.laps;
+  const L = RP.race.laps[RP.race.laps.length - 1].lap;
   if (RP.lap >= L) rpSetLap(1);
   $("rp-play").textContent = "❚❚ Pause"; $("rp-play").setAttribute("aria-label", "Pause");
   RP.timer = setInterval(() => { RP.lap >= L ? rpStop() : rpSetLap(RP.lap + 1); }, 350);
@@ -176,17 +189,21 @@ function rpChart() {
     g += `<polyline points="${pts}" fill="none" stroke="var(${SERIES[i]})" stroke-width="${c === r.winner ? 2.5 : 1.75}" stroke-linejoin="round"><title>${c}</title></polyline>`;
   }
   // end labels, spread so they do not overlap
-  const ends = RP.top.map((c, i) => ({ c, i, y: Y(r.laps[L - 1].win[c] || 0) })).sort((a, b) => a.y - b.y);
+  const lastEntry = r.laps[r.laps.length - 1];
+  const ends = RP.top.map((c, i) => ({ c, i, y: Y(lastEntry.win[c] || 0) })).sort((a, b) => a.y - b.y);
   for (let k = 1; k < ends.length; k++) ends[k].y = Math.max(ends[k].y, ends[k - 1].y + 13);
   const over = ends.length ? ends[ends.length - 1].y - (y0 + h) : 0;          // keep the stack inside the frame
   if (over > 0) ends.forEach(e => { e.y -= over; });
-  ends.forEach(e => { g += `<text x="${RP.W - 64}" y="${e.y + 4}" font-size="12" font-weight="600" fill="var(${SERIES[e.i]})">${e.c}</text>`; });
+  const lx = r.live ? rpX(lastEntry.lap) + 6 : RP.W - 64;
+  ends.forEach(e => { g += `<text x="${lx}" y="${e.y + 4}" font-size="12" font-weight="600" fill="var(${SERIES[e.i]})">${e.c}</text>`; });
   g += `<line id="rp-cursor" x1="${rpX(RP.lap)}" x2="${rpX(RP.lap)}" y1="${y0}" y2="${y0 + h}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
   $("rp-chart").innerHTML = g;
   $("rp-legend").innerHTML = RP.top.map((c, i) => `<span><i style="background:var(${SERIES[i]})"></i>${c}${c === r.winner ? " (winner)" : ""} <b class="num" id="rp-val-${i}"></b></span>`).join("");
 }
 
 let rpResize = null;
+// shared with the live page, which builds races itself instead of loading files
 addEventListener("resize", () => { clearTimeout(rpResize); rpResize = setTimeout(() => { if (RP.race) { rpChart(); rpSetLap(RP.lap); } }, 150); });
 
-rpInit();
+rpBind();
+if (D.races) rpInit();

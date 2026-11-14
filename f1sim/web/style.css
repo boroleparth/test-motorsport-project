@@ -198,3 +198,12 @@ footer a { color: inherit }
 .rp-adv-ctl { display: flex; gap: 8px; flex-wrap: wrap }
 .rp-adv-ctl select { flex: 1 1 140px }
 .row2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+
+/* live */
+.lv-status { gap: 8px }
+.lv-row { display: flex; align-items: center; gap: 10px }
+.lv-dot { flex: 0 0 auto; width: 12px; height: 12px; border-radius: 50%; background: var(--ink-3) }
+.lv-dot.on { background: var(--flag); box-shadow: 0 0 0 0 color-mix(in srgb, var(--flag) 50%, transparent); animation: lvpulse 1.6s infinite }
+@keyframes lvpulse { 70% { box-shadow: 0 0 0 10px transparent } 100% { box-shadow: 0 0 0 0 transparent } }
+@media (prefers-reduced-motion: reduce) { .lv-dot.on { animation: none } }
+.lv-speed { flex-direction: row; align-items: center; gap: 8px }

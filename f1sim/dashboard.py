@@ -117,6 +117,7 @@ PAGES = [  # (folder, menu label, title, description)
     ("forecast", "Forecast", "Race Forecast", "Win, podium and points odds for every circuit, the championship and pit strategies."),
     ("lab", "What-if lab", "What-if Lab", "Rerun an F1 race in your browser with rain, pace, strategy or grid changes."),
     ("replay", "Race replay", "Race Replay", "Step through any Grand Prix since 2023 with lap-by-lap win odds and a pit-stop advisor."),
+    ("live", "Live", "Live Race", "Live Formula 1 win odds and pit-stop advice during a Grand Prix."),
     ("accuracy", "Accuracy", "Prediction Accuracy", "How the simulator's predictions compare with real results and simple baselines."),
 ]
 REPO = "https://github.com/boroleparth/test-motorsport-project"
@@ -137,6 +138,19 @@ def _page_data(data: dict, page: str) -> dict:
     if page == "replay":
         from .replay import engine_constants
         return {"races": data.get("replays", []), "C": engine_constants()}
+    if page == "live":
+        from .laps import CIRCUITS
+        from .models import load_tracks
+        from .replay import engine_constants
+        from .winprob import load_weights
+        teams = {t["name"]: t for t in data["teams"]}
+        prior = {d["code"]: {"pace": teams[d["team"]]["pace"] + d["pace"],
+                             "dnf": 1 - (1 - teams[d["team"]]["reliability"]) * (1 - d["error_rate"])}
+                 for d in data["drivers"] if d["team"] in teams}
+        tracks = {t.key: {"name": t.name, "laps": t.laps, "pit_loss": t.pit_loss, "overtake": t.overtake,
+                          "sc_prob": t.sc_prob, "deg": t.deg} for t in load_tracks().values()}
+        return {"C": engine_constants(), "weights": load_weights().tolist(), "prior": prior,
+                "tracks": tracks, "circuits": CIRCUITS}
     # home: a summary of the other pages
     home = pick("label", "rounds_done", "rounds_total")
     track = next((t for t in data["tracks"] if t["key"] == data["next"]), None)
@@ -172,6 +186,9 @@ def render_page(data: dict, page: str) -> str:
         engine = "<script>\n" + resources.files("f1sim").joinpath("data", "engine.js").read_text() + "\n</script>\n"
     if page == "replay":
         engine = "<script>\n" + web.joinpath("replay-engine.js").read_text() + "\n</script>\n"
+    if page == "live":
+        engine = "".join("<script>\n" + web.joinpath(f).read_text() + "\n</script>\n"
+                         for f in ("replay-engine.js", "live-feed.js"))
     blob = json.dumps(_page_data(data, page), separators=(",", ":")).replace("</", "<\\/")
     full_title = title if not page else f"{title} · F1 Race Simulator"
     return f"""<!doctype html>
@@ -201,6 +218,7 @@ def render_page(data: dict, page: str) -> str:
 {engine}<script>
 const D = {blob};
 {web.joinpath("common.js").read_text()}
+{web.joinpath("replay.js").read_text() if page == "live" else ""}
 {web.joinpath(name + ".js").read_text()}
 </script>
 </body>

@@ -1,0 +1,56 @@
+  <header>
+    <h1>Live <span>race</span></h1>
+    <p>During a Grand Prix this page follows the race from OpenF1's timing data, updating each driver's chance to win as laps complete, with the pit advisor available at the latest lap. Everything is computed in your browser.</p>
+  </header>
+
+  <section aria-labelledby="h-now">
+    <h2 id="h-now" class="sr">Status</h2>
+    <div class="panel lv-status">
+      <div class="lv-row">
+        <span class="lv-dot" id="lv-dot" aria-hidden="true"></span>
+        <p class="headline" id="lv-headline">Checking for a live race…</p>
+      </div>
+      <p class="note" id="lv-note"></p>
+      <div class="actions" id="lv-actions" hidden>
+        <button class="btn primary" id="lv-demo">Watch the last race as if live</button>
+        <label for="lv-speed" class="lv-speed">Speed<select id="lv-speed"><option value="3000">1 lap every 3 s</option><option value="1200" selected>1 lap every 1.2 s</option><option value="400">1 lap every 0.4 s</option></select></label>
+        <button class="btn" id="lv-stopdemo" hidden>Stop</button>
+      </div>
+      <p class="err" id="rp-err" hidden></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-chart" id="rp-main" hidden>
+    <div class="panel">
+      <div class="rp-head">
+        <h2 id="h-chart">Chance to win, lap by lap</h2>
+        <p class="note" id="rp-sub"></p>
+      </div>
+      <div class="rp-legend" id="rp-legend"></div>
+      <svg id="rp-chart" viewBox="0 0 760 300" role="img" aria-label="Win probability by lap"></svg>
+      <div class="rp-lapbar">
+        <button class="btn" id="rp-play" aria-label="Play">▶ Play</button>
+        <input id="rp-lap" type="range" min="1" max="2" value="1" aria-label="Lap">
+        <span class="rp-lapval" id="rp-lapval"></span>
+        <span class="chip rp-status" id="rp-status" hidden></span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3 id="rp-order-h">Running order</h3>
+        <div class="scroll"><table class="data rp-order" id="rp-order"></table></div>
+        <p class="note">Tyre: <span class="tyre t0">S</span> soft, <span class="tyre t1">M</span> medium, <span class="tyre t2">H</span> hard, <span class="tyre t3">I</span> intermediate, <span class="tyre t4">W</span> wet, with laps on the set. Select a driver to open them in the pit advisor.</p>
+      </div>
+      <div class="panel" aria-live="polite">
+        <h3>Pit advisor</h3>
+        <div class="row2 rp-adv-ctl">
+          <select id="rp-driver" aria-label="Driver"></select>
+          <button class="btn primary" id="rp-advise">Compare options</button>
+        </div>
+        <p class="note" id="rp-adv-note"></p>
+        <div class="scroll"><table class="data" id="rp-adv"></table></div>
+        <p class="note" id="rp-actual"></p>
+      </div>
+    </div>
+  </section>

@@ -17,6 +17,7 @@ f1sim dashboard --out site --quick       # build all pages locally; drops the be
 f1sim dashboard --out site               # full build, ~6 min
 f1sim benchmark                          # pre-race benchmark vs baselines, with bootstrap intervals
 python scripts/build_site.py --out site  # what CI runs: fetch current season, refit grid.json, build
+f1sim predict                            # save the race-weekend forecast that is due (`record` scores the log)
 python scripts/calibrate_tracks.py       # rewrite tracks.json pit loss / sc_prob / deg from lap data
 ```
 
@@ -36,6 +37,10 @@ Two separate prediction paths:
   (tyres wear steadily mid-race, no cliff — deliberately different from the pre-race tyre model).
   Live **win odds** come from `winprob.py`, a 6-feature conditional logit (weights in
   `data/winprob.json`), not from the simulator; the simulator is used for what-ifs and the pit advisor.
+
+`predictions.py` keeps the public prediction log (`data/predictions/`): forecasts saved before and after
+qualifying, refused once their session has started or if one already exists, and scored at build time by
+`track_record` for the Accuracy page. Never edit or regenerate saved forecasts.
 
 `tyres.py` derives circuit parameters (pit loss, wear multiplier, safety-car rate) from lap data;
 `scripts/calibrate_tracks.py` writes them into `data/tracks.json`.

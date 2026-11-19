@@ -174,6 +174,53 @@ def cmd_fit(args, grid, tracks):
         print(f"\nSaved to {args.out}; use it with --grid {args.out}")
 
 
+def cmd_predict(args, grid, tracks):
+    from . import predictions as P
+    from .datasource import fetch_qualifying, fetch_schedule
+    season = load_season(args.season_file)
+    log = Path(args.log) if args.log else P.LOG
+    if args.mode == "record":
+        rec = P.track_record(P.load_log(log), [season])
+        for r in rec["races"]:
+            parts = [f"{r['season']} R{r['round']:<2} {r['name']:<26} winner {r['winner'] or 'pending':<7}"]
+            for kind in P.KINDS:
+                o = r.get(kind)
+                if o:
+                    got = f", winner given {o['winner_prob']:.1%}" if "winner_prob" in o else ""
+                    parts.append(f"{P.LABELS[kind].lower()}: {o['favourite']} {o['favourite_win']:.1%}{got}")
+            print(" | ".join(parts))
+        for s in rec["summary"].values():
+            print(f"{s['label']}: {s['n']} races, favourite won {s['favourite_won']:.0%}, "
+                  f"winner given {s['winner_prob']:.1%} on average, probability score {s['rps']:.3f}")
+        return
+    year = season["season"]
+    schedule = fetch_schedule(year)
+    quali = lambda rnd: fetch_qualifying(year, rnd)
+    if args.mode == "auto":
+        for line in P.auto(grid, tracks, season, schedule, quali, n_sims=args.sims, log=log):
+            print(line)
+        return
+    race = P.next_race(schedule, season)
+    if race is None:
+        sys.exit("no race left this season")
+    kwargs = {}
+    if args.mode == "post":
+        rows = quali(race["round"])
+        order = args.start_grid.upper().split(",") if args.start_grid else [c for c, _ in rows]
+        if not order:
+            sys.exit(f"no qualifying results for {race['name']} yet; pass --start-grid to give the order")
+        kwargs = {"start_grid": order, "quali_times": {c: t for c, t in rows if t}}
+    kind = "pre_quali" if args.mode == "pre" else "post_quali"
+    try:
+        path = P.save(kind, race, grid, tracks[race["track"]], season, n_sims=args.sims, log=log,
+                      force=args.force, **kwargs)
+    except ValueError as exc:
+        sys.exit(str(exc))
+    top = json.loads(path.read_text())[kind]["summary"][:5]
+    print(f"Saved {P.LABELS[kind].lower()} forecast for {race['name']} to {path}")
+    print("  " + ", ".join(f"{r['driver']} {r['win']:.1%}" for r in top))
+
+
 def main(argv: list[str] | None = None) -> None:
     def common(sims: int = 2000) -> argparse.ArgumentParser:
         c = argparse.ArgumentParser(add_help=False)
@@ -242,6 +289,17 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--through", type=int, help="use only races up to this round")
     p.add_argument("--out", help="write the fitted grid to this JSON file")
     p.set_defaults(func=cmd_fit)
+
+    p = sub.add_parser("predict", parents=[common(10000)],
+                       help="save a forecast for the next race to the public prediction log, or show the log")
+    p.add_argument("mode", nargs="?", default="auto", choices=["auto", "pre", "post", "record"],
+                   help="auto: save whichever forecast is due (default); pre / post: save the before- or "
+                        "after-qualifying forecast now; record: score the log against results")
+    p.add_argument("--start-grid", metavar="VER,NOR,...", help="with post: starting order, if penalties change it")
+    p.add_argument("--season-file", help="season file from `f1sim fetch` (default: bundled latest season)")
+    p.add_argument("--log", help="folder of prediction files (default: f1sim/data/predictions)")
+    p.add_argument("--force", action="store_true", help="overwrite an existing forecast or save after the deadline")
+    p.set_defaults(func=cmd_predict)
 
     args = parser.parse_args(argv)
     args.func(args, load_grid(args.grid), load_tracks(args.tracks_file))

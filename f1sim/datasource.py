@@ -65,6 +65,43 @@ def _code(driver: dict) -> str:
     return driver.get("code") or driver["driverId"][:3].upper()
 
 
+def _best_lap(q: dict) -> float | None:
+    laps = [t for t in (_lap_seconds(q.get(s)) for s in ("Q1", "Q2", "Q3")) if t]
+    return min(laps) if laps else None
+
+
+def _utc(day: str | None, clock: str | None) -> str | None:
+    """Jolpica date + time as an ISO timestamp in UTC (``None`` if the date is missing)."""
+    if not day:
+        return None
+    return f"{day}T{(clock or '00:00:00Z').rstrip('Z')}+00:00"
+
+
+def fetch_schedule(year: int | str) -> list[dict]:
+    """The season calendar with start times: ``round``, ``track``, ``name``, ``race`` and
+    ``qualifying`` (ISO timestamps in UTC; ``qualifying`` is ``None`` if not published)."""
+    out = []
+    for race in _get(f"{year}/races")["Races"]:
+        cid = race["Circuit"]["circuitId"]
+        q = race.get("Qualifying") or {}
+        out.append({"round": int(race["round"]), "track": CIRCUIT_KEYS.get(cid, cid), "name": race["raceName"],
+                    "race": _utc(race.get("date"), race.get("time")), "qualifying": _utc(q.get("date"), q.get("time"))})
+    return out
+
+
+def fetch_qualifying(year: int | str, rnd: int) -> list[tuple[str, float | None]]:
+    """One race's qualifying classification: ``(code, best lap in s or None)``, pole first.
+
+    Empty until the session's results are published. Grid penalties are not
+    applied: the official starting grid only appears with the race result.
+    """
+    races = _get(f"{year}/{rnd}/qualifying")["Races"]
+    if not races:
+        return []
+    rows = sorted(races[0]["QualifyingResults"], key=lambda q: int(q["position"]))
+    return [(_code(q["Driver"]), _best_lap(q)) for q in rows]
+
+
 def fetch_season(year: int | str) -> dict:
     """Download a season: calendar, race results, qualifying times and standings.
 
@@ -82,9 +119,9 @@ def fetch_season(year: int | str) -> dict:
     quali = {}
     for race in _get(f"{year}/qualifying")["Races"]:
         for q in race["QualifyingResults"]:
-            laps = [t for t in (_lap_seconds(q.get(s)) for s in ("Q1", "Q2", "Q3")) if t]
-            if laps:
-                quali[(race["round"], _code(q["Driver"]))] = min(laps)
+            best = _best_lap(q)
+            if best:
+                quali[(race["round"], _code(q["Driver"]))] = best
 
     races, names = [], {}
     for race in _get(f"{year}/results")["Races"]:

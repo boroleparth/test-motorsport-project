@@ -105,6 +105,24 @@ the accuracy benchmark and the replay data). Each page is a single self-containe
 also works opened straight from disk. The page templates, shared styles and
 scripts are in `f1sim/web/`.
 
+### Prediction log
+
+Every race weekend the simulator's forecast is saved twice, before
+qualifying and after it (given the real qualifying order and lap times), to
+`f1sim/data/predictions/<season>-<round>-<circuit>.json`. A forecast is never
+saved once its session has started and never overwritten, so the git history
+shows what was predicted before the result was known. The Accuracy page's
+"Track record" scores each logged forecast once the race is run.
+
+```bash
+f1sim predict          # save whichever forecast is due for the next race (safe to run any time)
+f1sim predict pre      # save the before-qualifying forecast now
+f1sim predict post     # save the after-qualifying forecast (add --start-grid if penalties change the grid)
+f1sim predict record   # score the log against real results
+```
+
+`scripts/build_site.py --predict` runs the same check as part of the site build.
+
 ### What-if lab
 
 The dashboard includes a what-if lab that runs the simulator in the visitor's

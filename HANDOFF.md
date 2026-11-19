@@ -1,7 +1,7 @@
 # Handoff: f1sim
 
 State as of 15 November 2026. Everything below is on `main` in
-`boroleparth/test-motorsport-project`, all 36 tests pass, and the site is live at
+`boroleparth/test-motorsport-project`, all 36 tests pass (41 on the work branch with the prediction log), and the site is live at
 https://boroleparth.github.io/test-motorsport-project/.
 
 ## What it is
@@ -110,12 +110,16 @@ f1sim benchmark                      # pre-race benchmark with intervals
 
 ## Next steps
 
-1. **Race-weekend cycle and public prediction log (before Las Vegas, 22 Nov).**
-   Friday: save a pre-qualifying forecast snapshot to the repo. Saturday after
-   qualifying: save a forecast using the real grid and qualifying times
-   (`simulate_race(start_grid=…, quali_times=…)`). Sunday: score both and show a
-   "Track record" on the Accuracy page. Three races left: Las Vegas, Qatar,
-   Abu Dhabi.
+1. **Race-weekend prediction log: built, waiting on two things.** `f1sim/predictions.py`,
+   `f1sim predict`, `scripts/build_site.py --predict` and a "Track record" section on the
+   Accuracy page (see README, "Prediction log"). The Las Vegas pre-qualifying forecast was
+   saved on 19 Nov (Antonelli 24.2%, Verstappen 22.0%, Norris 15.3%). Still to do:
+   - **Push it before Las Vegas qualifying (21 Nov 04:00 UTC)**, or the git history no
+     longer shows the forecast was made beforehand.
+   - **Automate it.** Not done: it needs `contents: write` in `pages.yml`, a race-weekend
+     schedule (`41 */3 * * 0,4,5,6`), `--predict` on the build step, and a step that commits
+     `f1sim/data/predictions/` to `main`. Until then, run `f1sim predict` by hand after
+     qualifying (from 05:30 UTC Saturday for Las Vegas) and commit the file.
 2. **Repository polish:** README with screenshots, version tags, link from the
    profile repo.
 3. **Off-season models:** overtaking learned from lap data; virtual safety cars

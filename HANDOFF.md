@@ -116,10 +116,10 @@ f1sim benchmark                      # pre-race benchmark with intervals
    saved on 19 Nov (Antonelli 24.2%, Verstappen 22.0%, Norris 15.3%). Still to do:
    - **Push it before Las Vegas qualifying (21 Nov 04:00 UTC)**, or the git history no
      longer shows the forecast was made beforehand.
-   - **Automate it.** Not done: it needs `contents: write` in `pages.yml`, a race-weekend
-     schedule (`41 */3 * * 0,4,5,6`), `--predict` on the build step, and a step that commits
-     `f1sim/data/predictions/` to `main`. Until then, run `f1sim predict` by hand after
-     qualifying (from 05:30 UTC Saturday for Las Vegas) and commit the file.
+   - Automation is in `pages.yml`: every 3 hours Thursday to Sunday the site build runs
+     `scripts/build_site.py --predict` and commits any new forecast in
+     `f1sim/data/predictions/` to `main` (only the build job can write to the repo). It takes
+     effect once merged to `main`. Check the first run on the Las Vegas weekend.
 2. **Repository polish:** README with screenshots, version tags, link from the
    profile repo.
 3. **Off-season models:** overtaking learned from lap data; virtual safety cars

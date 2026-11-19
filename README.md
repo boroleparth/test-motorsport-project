@@ -121,7 +121,9 @@ f1sim predict post     # save the after-qualifying forecast (add --start-grid if
 f1sim predict record   # score the log against real results
 ```
 
-`scripts/build_site.py --predict` runs the same check as part of the site build.
+On race weekends the site workflow does this by itself: every 3 hours from
+Thursday to Sunday it runs `scripts/build_site.py --predict` and commits any new
+forecast to the repository.
 
 ### What-if lab
 

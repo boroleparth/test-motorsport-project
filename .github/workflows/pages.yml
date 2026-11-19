@@ -6,12 +6,13 @@ on:
   schedule:
     # Mondays 06:17 UTC, after a weekend's race results are in
     - cron: "17 6 * * 1"
+    # Every 3 hours Thursday to Sunday: saves the before- and after-qualifying
+    # forecasts for the next race to the prediction log when they are due
+    - cron: "41 */3 * * 0,4,5,6"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -20,14 +21,30 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only to commit new forecasts in f1sim/data/predictions/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - run: pip install -e .
-      - name: Fetch latest results, refit ratings and build the dashboard
-        run: python scripts/build_site.py --out site
+      - name: Fetch latest results, refit ratings, save any forecast due, build the site
+        run: python scripts/build_site.py --out site --predict
+      - name: Commit new forecasts to the prediction log
+        # Only the prediction files are committed; refreshed results and ratings stay CI-only as before.
+        # Pushes made with GITHUB_TOKEN do not start another run of this workflow.
+        run: |
+          git add f1sim/data/predictions
+          if git diff --cached --quiet; then echo "No new forecast"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Save race-weekend forecast to the prediction log"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && exit 0
+            sleep 10
+          done
+          echo "Could not push the forecast" && exit 1
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -35,6 +52,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

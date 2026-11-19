@@ -65,7 +65,8 @@ needs; `render_page` inlines `web/style.css`, `common.js`, `<page>.html`, `<page
 written as separate `replay/data/<season>-<round>.json` files by `replay.py`.
 
 CI (`.github/workflows/`): tests on every push (Python 3.11 and 3.13); `pages.yml` runs
-`scripts/build_site.py` on push to `main` and Mondays, which may refetch results and refit `grid.json`.
+`scripts/build_site.py --predict` on push to `main`, Mondays and every 3 h Thursday–Sunday; it may refetch
+results and refit `grid.json` (not committed) and commits only new files in `f1sim/data/predictions/` to `main`.
 
 ## Conventions
 

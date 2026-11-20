@@ -3,7 +3,9 @@
 Used by the GitHub Pages workflow. Steps:
 1. download the current season's results (kept only if a race has been run);
 2. refit the ratings from the latest season;
-3. write the dashboard to ``site/index.html``.
+3. with ``--predict``, save any forecast due for the next race to the public
+   prediction log (``f1sim/data/predictions/``; the workflow commits it);
+4. write the website to ``site/``.
 
 If the download fails, the bundled data is used, so the site still builds.
 """
@@ -43,11 +45,29 @@ def refresh(year: int) -> bool:
     return True
 
 
+def predict() -> None:
+    """Save the pre- or post-qualifying forecast for the next race if one is due."""
+    from f1sim import predictions
+    from f1sim.datasource import fetch_qualifying, fetch_schedule
+
+    season = load_season()
+    try:
+        schedule = fetch_schedule(season["season"])
+        notes = predictions.auto(load_grid(), load_tracks(), season, schedule,
+                                 lambda rnd: fetch_qualifying(season["season"], rnd))
+    except Exception as exc:  # a missed forecast must not stop the site build
+        notes = [f"Could not save a forecast ({exc})"]
+    for line in notes:
+        print(line)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default="site")
     parser.add_argument("--sims", type=int, default=2000)
     parser.add_argument("--no-fetch", action="store_true", help="use the bundled data as it is")
+    parser.add_argument("--predict", action="store_true",
+                        help="save whichever race-weekend forecast is due to the prediction log")
     args = parser.parse_args()
 
     if not args.no_fetch and refresh(dt.date.today().year):
@@ -56,6 +76,9 @@ def main() -> None:
         note = (f"Fitted by scripts/build_site.py from {season['season']} rounds 1-{rounds} (api.jolpi.ca). "
                 "consistency, wet and pit-stop values are assumptions, not measurements.")
         (DATA / "grid.json").write_text(json.dumps(grid_to_json(fit_grid(season, load_grid()), note), indent=1))
+
+    if args.predict:
+        predict()
 
     history = [load_season(y) for y in bundled_seasons()]
     pages = build_dashboard(load_grid(), load_tracks(), args.out, load_season(), n_sims=args.sims, seed=0,

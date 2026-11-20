@@ -1,7 +1,7 @@
 # Handoff: f1sim
 
 State as of 15 November 2026. Everything below is on `main` in
-`boroleparth/test-motorsport-project`, all 36 tests pass, and the site is live at
+`boroleparth/test-motorsport-project`, all 36 tests pass (41 on the work branch with the prediction log), and the site is live at
 https://boroleparth.github.io/test-motorsport-project/.
 
 ## What it is
@@ -92,10 +92,12 @@ f1sim benchmark                      # pre-race benchmark with intervals
 
 ## Open items and caveats
 
-- **Live feed unverified.** Whether OpenF1 shares data during a session for
-  free can only be tested live. A scheduled check runs this session at
-  2026-11-20 01:00 UTC (Las Vegas FP1); if blocked, the live page says so and
-  shows the race once data is published.
+- **Live feed needs a paid OpenF1 account.** Checked during Las Vegas FP1 (20 Nov 2026):
+  while any F1 session runs, OpenF1 answers 401 to every unauthenticated request, past
+  sessions included, with no CORS header, so the browser sees only a failed request. The live
+  page now says so; it works between sessions (the replay of the last race) and the Race replay
+  page is unaffected. Real-time odds would need an OpenF1 key, which a static site cannot hide;
+  that would need a small server or proxy.
 - **Known limitation:** win odds can swing briefly during pit cycles in unusual
   races (wet races, very low tyre wear), when it is unclear who still has to stop.
 - **Network:** F1's own timing archive now needs an F1 account, so lap data
@@ -110,12 +112,16 @@ f1sim benchmark                      # pre-race benchmark with intervals
 
 ## Next steps
 
-1. **Race-weekend cycle and public prediction log (before Las Vegas, 22 Nov).**
-   Friday: save a pre-qualifying forecast snapshot to the repo. Saturday after
-   qualifying: save a forecast using the real grid and qualifying times
-   (`simulate_race(start_grid=…, quali_times=…)`). Sunday: score both and show a
-   "Track record" on the Accuracy page. Three races left: Las Vegas, Qatar,
-   Abu Dhabi.
+1. **Race-weekend prediction log: built, waiting on two things.** `f1sim/predictions.py`,
+   `f1sim predict`, `scripts/build_site.py --predict` and a "Track record" section on the
+   Accuracy page (see README, "Prediction log"). The Las Vegas pre-qualifying forecast was
+   saved on 19 Nov (Antonelli 24.2%, Verstappen 22.0%, Norris 15.3%). Still to do:
+   - **Push it before Las Vegas qualifying (21 Nov 04:00 UTC)**, or the git history no
+     longer shows the forecast was made beforehand.
+   - Automation is in `pages.yml`: every 3 hours Thursday to Sunday the site build runs
+     `scripts/build_site.py --predict` and commits any new forecast in
+     `f1sim/data/predictions/` to `main` (only the build job can write to the repo). It takes
+     effect once merged to `main`. Check the first run on the Las Vegas weekend.
 2. **Repository polish:** README with screenshots, version tags, link from the
    profile repo.
 3. **Off-season models:** overtaking learned from lap data; virtual safety cars

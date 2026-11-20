@@ -92,7 +92,8 @@ table { border-collapse: collapse; width: 100%; font-size: 13px }
 .data th, .data td { padding: 6px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; white-space: nowrap }
 .data th { font: 500 11px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); border-bottom-color: var(--line) }
 .data th.n, .data td.n { text-align: right }
-.data td.code { font: 500 13px var(--mono) }
+.data .code { font: 500 13px var(--mono) }
+.data a { color: inherit; text-underline-offset: 2px }
 .data tr.best td { background: color-mix(in srgb, var(--mark) 9%, transparent) }
 details summary { cursor: pointer; font-size: 13px; color: var(--ink-2); padding: 4px 0 }
 

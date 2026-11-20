@@ -21,6 +21,32 @@ function renderCal(event) {
 }
 for (const e of ["win", "podium", "top10"]) $("cal-" + e).addEventListener("click", () => renderCal(e));
 
+function initRecord() {
+  const R = D.track_record;
+  if (!R || !R.races.length) return;
+  $("rec").hidden = false;
+  const when = t => new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+  const cell = (o, winner) => {
+    if (!o) return `<td>–</td><td class="n">–</td>`;
+    const tip = `Saved ${when(o.saved)}\n` + o.top.map(t => `${t.driver} ${pct(t.win)}`).join("\n");
+    const fav = winner ? (o.favourite_won ? `<b>${o.favourite}</b> ✓` : o.favourite) : o.favourite;
+    return `<td data-tip="${esc(tip)}"><span class="code">${fav}</span> ${pct(o.favourite_win)}</td>` +
+      `<td class="n">${o.winner_prob === undefined ? "–" : pct(o.winner_prob)}</td>`;
+  };
+  $("rectable").innerHTML = `<tr><th>Race</th><th>Winner</th><th>Favourite before qualifying</th><th class="n">Chance</th>` +
+    `<th>Favourite after qualifying</th><th class="n">Chance</th><th>Pole</th></tr>` +
+    R.races.slice().reverse().map(r => `<tr><td><a href="${D.log_url}${r.file}">${esc(r.name)}</a> ${r.season}</td>` +
+      (r.winner ? `<td class="code">${r.winner}</td>` : `<td class="note">Race ${when(r.race_start)}</td>`) +
+      cell(r.pre_quali, r.winner) + cell(r.post_quali, r.winner) +
+      `<td class="code">${r.post_quali ? r.post_quali.pole + (r.winner && r.post_quali.pole_won ? " ✓" : "") : "–"}</td></tr>`).join("");
+  const S = R.summary, parts = [];
+  for (const k of ["pre_quali", "post_quali"]) if (S[k]) parts.push(`${S[k].label.toLowerCase()}, the favourite won ${Math.round(S[k].favourite_won * S[k].n)} of ${S[k].n} and the winner was given ${pct(S[k].winner_prob)} on average`);
+  if (S.post_quali) parts.push(`the pole-sitter won ${Math.round(S.post_quali.pole_won * S.post_quali.n)} of ${S.post_quali.n}`);
+  const n = Math.max(0, ...Object.values(S).map(s => s.n));
+  $("recsum").textContent = n ? `Scored so far (${n} race${n > 1 ? "s" : ""}): ` + parts.join("; ") + ". Too few races to judge yet; the benchmark below covers 207." :
+    "No logged race has been run yet. The first forecasts are scored after the race.";
+}
+
 function initAccuracy() {
   const A = D.accuracy;
   if (!A) $("acc").hidden = true; else {
@@ -48,4 +74,5 @@ function initAccuracy() {
     D.drivers.map(d => `<tr><td class="code">${d.code}</td><td>${esc(d.team)}</td><td class="n">+${d.pace.toFixed(2)}</td><td class="n">+${d.quali_gap.toFixed(2)}</td><td class="n">${pct(d.error_rate)}</td></tr>`).join("");
 }
 
+initRecord();
 initAccuracy();

@@ -57,6 +57,7 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
                   for t in sorted(grid.teams.values(), key=lambda t: t.pace)],
         "tracks": out_tracks, "season": None, "strategy": None, "accuracy": None,
         "model": export_model(grid, tracks),
+        "track_record": None,
     }
     # one-lap gap is shown relative to the quickest qualifier
     best_q = min(d["quali_gap"] for d in data["drivers"])
@@ -85,6 +86,11 @@ def build_data(grid: Grid, tracks: dict[str, Track], season: dict | None = None,
                         for r in compare_strategies(grid, tracks[featured], c, n_sims=strat_sims, seed=seed)]
                     for c in codes},
     }
+
+    from .predictions import load_log, track_record
+    log = load_log()
+    if log:
+        data["track_record"] = track_record(log, history or ([season] if season else []))
 
     if accuracy and season and done > 6:
         (child,) = seeds.spawn(1)
@@ -134,7 +140,8 @@ def _page_data(data: dict, page: str) -> dict:
         return {**pick("next", "drivers", "model"),
                 "tracks": [{k: t[k] for k in ("key", "name", "remaining")} for t in data["tracks"]]}
     if page == "accuracy":
-        return pick("label", "drivers", "teams", "accuracy")
+        return {**pick("label", "drivers", "teams", "accuracy", "track_record"),
+                "log_url": f"{REPO}/blob/main/f1sim/data/predictions/"}
     if page == "replay":
         from .replay import engine_constants
         return {"races": data.get("replays", []), "C": engine_constants()}

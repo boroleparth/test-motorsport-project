@@ -2,6 +2,12 @@
 // Reuses the replay page's chart, running order and pit advisor (replay.js).
 const LV = { mode: null, raw: null, track: null, entries: [], timer: null, session: null, demo: null };
 const POLL_MS = 20000;
+// OpenF1 answers 401 to every unauthenticated request, past sessions included, while any F1
+// session (practice, qualifying or race) is running, and that answer has no CORS header, so
+// the browser only sees a failed request. Checked live during Las Vegas FP1, 20 Nov 2026.
+const CLOSED = "OpenF1, the free timing service this page uses, closes all its data to non-paying users " +
+  "while any Formula 1 session is running (practice, qualifying or the race) and opens it again when the session ends. " +
+  "So live odds cannot be shown during a session; afterwards this page can replay it, and the Race replay page has every race once its data is published.";
 const fmtTime = iso => new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 async function getJSON(path) {
@@ -25,7 +31,8 @@ async function lvInit() {
     const year = new Date().getUTCFullYear();
     races = await getJSON(`sessions?year=${year}&session_name=Race`);
   } catch (e) {
-    status("Could not reach the timing service.", "OpenF1 did not answer. Check your connection and reload the page.");
+    if (navigator.onLine === false) status("You appear to be offline.", "Reconnect and reload the page.");
+    else status("Live timing is closed right now.", CLOSED + " If no session is on, OpenF1 may be down; try again later.");
     return;
   }
   const now = Date.now();
@@ -84,13 +91,14 @@ async function lvLive(session) {
       if (st !== "ok") {
         status(`${session.location}: race day`, st === "empty"
           ? "Waiting for the first completed lap. The page checks every 20 seconds."
-          : `The timing service is not sharing data for this session yet (it answered ${st}). If live data needs a paid OpenF1 account, odds will appear once the data is published after the race.`, true);
+          : `${CLOSED} (OpenF1 answered ${st}.) The page keeps checking every 20 seconds.`, true);
         return;
       }
       LV.entries = LV.entries.slice(0, Math.max(0, LV.entries.length - 3));   // timing data can be corrected for a few laps
       lvRender(lvUpdate(raw, session, LV.track.laps), `Updated ${new Date().toLocaleTimeString()}; refreshes every 20 seconds.`);
     } catch (e) {
-      status(`${session.location}: race day`, "Lost contact with the timing service; retrying in 20 seconds.", true);
+      status(`${session.location}: race day`, navigator.onLine === false ? "You appear to be offline; retrying in 20 seconds."
+        : `${CLOSED} The page keeps checking every 20 seconds.`, true);
     }
   };
   await tick();
@@ -106,7 +114,10 @@ async function lvDemo() {
   let full;
   try { full = (await LiveFeed.fetchSession(s.session_key)).raw; } catch (e) { full = null; }
   $("lv-demo").disabled = false;
-  if (!full || !full.laps.length) { status("Could not load the last race's data. Try again in a minute."); return; }
+  if (!full || !full.laps.length) {
+    status("Could not load the last race's data.", "OpenF1 closes its data to non-paying users while any Formula 1 session is running; if one is on, try again when it ends. Otherwise try again in a minute.");
+    return;
+  }
   const ends = {};      // leader's lap end times, to cut the feed
   full.laps.forEach(l => { if (l.date_start && l.lap_duration) { const t = Date.parse(l.date_start) + l.lap_duration * 1e3; ends[l.lap_number] = Math.min(ends[l.lap_number] || Infinity, t); } });
   const before = (iso, t) => !iso || Date.parse(iso) <= t;

@@ -92,10 +92,12 @@ f1sim benchmark                      # pre-race benchmark with intervals
 
 ## Open items and caveats
 
-- **Live feed unverified.** Whether OpenF1 shares data during a session for
-  free can only be tested live. A scheduled check runs this session at
-  2026-11-20 01:00 UTC (Las Vegas FP1); if blocked, the live page says so and
-  shows the race once data is published.
+- **Live feed needs a paid OpenF1 account.** Checked during Las Vegas FP1 (20 Nov 2026):
+  while any F1 session runs, OpenF1 answers 401 to every unauthenticated request, past
+  sessions included, with no CORS header, so the browser sees only a failed request. The live
+  page now says so; it works between sessions (the replay of the last race) and the Race replay
+  page is unaffected. Real-time odds would need an OpenF1 key, which a static site cannot hide;
+  that would need a small server or proxy.
 - **Known limitation:** win odds can swing briefly during pit cycles in unusual
   races (wet races, very low tyre wear), when it is unclear who still has to stop.
 - **Network:** F1's own timing archive now needs an F1 account, so lap data
